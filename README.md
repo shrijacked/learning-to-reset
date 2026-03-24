@@ -15,8 +15,10 @@ This is an initial research scaffold, not a full training pipeline yet. The next
 ## Project Docs
 
 - `docs/method-overview.md`: current method summary and implementation targets
+- `docs/current-approaches.md`: summary of current methods and the project gap
 - `docs/project-plan.md`: architecture, task traceability, and verification plan
 - `docs/extension-roadmap.md`: future direction for multi-step cleaning and memory-aware control
+- `docs/status-report.md`: completed work, missing engineering tasks, and non-engineering leftovers
 - `skills/learning-to-reset-research/SKILL.md`: repo-local working guide for future development
 
 ## Quick Start
@@ -25,6 +27,12 @@ Run the tests:
 
 ```bash
 python3 -m unittest discover -s tests -v
+```
+
+Run the baseline mechanics demo:
+
+```bash
+PYTHONPATH=src python3 -m learning_to_reset
 ```
 
 ## Repository Layout

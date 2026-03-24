@@ -7,6 +7,7 @@ from learning_to_reset.context_manager import (
     extract_answer_text,
     manage_single_clean_cycle,
 )
+from learning_to_reset.demo import DemoSnapshot, build_demo_report, build_demo_snapshot
 from learning_to_reset.rloo import (
     ModifiedRLOOResult,
     TrajectorySample,
@@ -24,6 +25,7 @@ from learning_to_reset.trace_curation import (
 
 __all__ = [
     "CuratedTrace",
+    "DemoSnapshot",
     "ManagedGeneration",
     "ModifiedRLOOResult",
     "NormalizedTrace",
@@ -31,6 +33,8 @@ __all__ = [
     "TrajectoryTerm",
     "build_initial_prompt",
     "build_retry_prompt",
+    "build_demo_report",
+    "build_demo_snapshot",
     "compute_leave_one_out_advantages",
     "compute_modified_rloo_terms",
     "compute_total_reward",
