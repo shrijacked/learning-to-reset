@@ -19,6 +19,7 @@ This is an initial research scaffold, not a full training pipeline yet. The next
 - `docs/project-plan.md`: architecture, task traceability, and verification plan
 - `docs/extension-roadmap.md`: future direction for multi-step cleaning and memory-aware control
 - `docs/status-report.md`: completed work, missing engineering tasks, and non-engineering leftovers
+- `docs/team-summary.md`: short shareable snapshot for collaborators
 - `skills/learning-to-reset-research/SKILL.md`: repo-local working guide for future development
 
 ## Quick Start
