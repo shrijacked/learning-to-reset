@@ -1,0 +1,68 @@
+# Extension Roadmap
+
+## Why Extensions Matter More
+
+Even a simple one-shot `<clean>` mechanism can improve reasoning. The more important research opportunity is to turn that proof-of-concept into a stronger context-management system that can reset, preserve, and recall information selectively.
+
+## Priority Order
+
+### Phase 1: Baseline stabilization
+
+- Reproduce trace curation
+- Reproduce one-shot cleaning
+- Reproduce modified RLOO reward propagation
+- Build evaluation hooks around Countdown-style tasks
+
+### Phase 2: Multi-step cleaning
+
+Goal:
+- Allow more than one reset in a reasoning episode without creating infinite loops
+
+Core changes:
+- Add a reset budget `k > 1`
+- Add a small step-cost penalty for each clean action
+- Record per-step interaction history for analysis
+
+Main risk:
+- The model may learn to clean too aggressively instead of persisting through recoverable reasoning
+
+### Phase 3: Selective retention
+
+Goal:
+- Preserve useful partial progress when resetting
+
+Core changes:
+- Replace full deletion with span-level keep/drop decisions
+- Summarize or cache useful intermediate facts before reset
+- Compare full-reset versus partial-retention performance on harder questions
+
+Main risk:
+- The retained snippets may keep the same clutter that cleaning was supposed to remove
+
+### Phase 4: Recall-aware memory
+
+Goal:
+- Move from a one-token reset mechanism toward a finite context machine with simple memory operations
+
+Core changes:
+- Introduce explicit write and recall actions
+- Store reset reasoning in a lightweight external memory
+- Let the policy retrieve selectively during later reasoning stages
+
+Main risk:
+- Improved performance might come from memory augmentation rather than better self-management, so evaluation must isolate those effects
+
+## Proposed Evaluation Ladder
+
+```mermaid
+flowchart TD
+    A["One-shot clean baseline"] --> B["Multi-step clean"]
+    B --> C["Selective retention"]
+    C --> D["Recall-aware memory"]
+```
+
+## Success Criteria
+
+- The baseline matches the intended qualitative behavior and core reward logic.
+- Extensions improve hard-example performance without collapsing into excessive resets.
+- The agent becomes more selective over time, not merely more active.

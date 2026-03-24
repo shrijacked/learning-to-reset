@@ -1,0 +1,74 @@
+# Project Plan
+
+## Objective
+
+Build the current baseline cleanly, then grow the repository toward higher-value extensions that preserve useful context instead of always deleting everything.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    A["Expert traces"] --> B["Normalize traces"]
+    B --> C{"Correct final answer?"}
+    C -->|Yes| D["Keep think/answer format"]
+    C -->|No| E["Append reset rationale and emit clean token"]
+    D --> F["SFT policy"]
+    E --> F["SFT policy"]
+    F --> G["Generate y0"]
+    G --> H{"clean emitted?"}
+    H -->|No| I["Use y0 answer"]
+    H -->|Yes| J["Clear context and remove clean instructions"]
+    J --> K["Generate y1"]
+    I --> L["Final interaction reward"]
+    K --> L["Final interaction reward"]
+    L --> M["Modified RLOO update"]
+```
+
+## Dependency Graph
+
+```mermaid
+flowchart LR
+    P1["Trace curation"] --> P2["Context manager"]
+    P2 --> P3["Training loop integration"]
+    P3 --> P4["Evaluation pipeline"]
+    P2 --> E1["Multi-step cleaning"]
+    E1 --> E2["Selective retention"]
+    E2 --> E3["Memory recall"]
+```
+
+## Traceable Task List
+
+| Task ID | Task | Source | Deliverable | Verification |
+| --- | --- | --- | --- | --- |
+| R1 | Normalize and curate SFT traces | `main.pdf` Section 3.2.1, Figure 3 | `trace_curation.py` | `tests/test_trace_curation.py` |
+| R2 | Implement one-shot clean context manager | `main.pdf` Section 3.2.2, Figure 4 | `context_manager.py` | `tests/test_context_manager.py` |
+| R3 | Encode modified RLOO math | `main.pdf` Section 3.2.3, Eq. 4-6 | `rloo.py` | `tests/test_rloo.py` |
+| R4 | Keep the repo aligned for later sessions | User request + current workflow | repo-local skill | skill file review |
+| R5 | Add continuous verification for GitHub | repository bootstrap requirement | GitHub Actions workflow | CI run in GitHub |
+| E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | future module | future tests |
+| E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | future module | future tests |
+| E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | future module | future tests |
+
+## Current Boundary
+
+### Baseline
+
+- Single-use cleaning only
+- No external memory writes or reads
+- Final reward assigned to the end-to-end interaction
+- Countdown-focused evaluation
+
+### Extension
+
+- More than one reset per interaction
+- Reward shaping that penalizes excessive resets
+- Selective deletion or summarization instead of full deletion
+- External memory recall or retrieval
+
+## Verification Rule
+
+Every implementation step should satisfy one of the following:
+
+- It implements a mechanism described in the reference materials.
+- It supports a clearly labeled extension motivated by the reference materials.
+- It is required for repository operation, testing, or GitHub automation.
