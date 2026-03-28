@@ -15,6 +15,7 @@ This is an initial research scaffold, not a full training pipeline yet. The next
 ## Project Docs
 
 - `docs/method-overview.md`: current method summary and implementation targets
+- `docs/code-walkthrough.md`: file-by-file explanation of the code and jargon
 - `docs/current-approaches.md`: summary of current methods and the project gap
 - `docs/project-plan.md`: architecture, task traceability, and verification plan
 - `docs/extension-roadmap.md`: future direction for multi-step cleaning and memory-aware control
