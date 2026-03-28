@@ -26,7 +26,7 @@ This is an initial research scaffold, not a full training pipeline yet. The next
 Run the tests:
 
 ```bash
-python3 -m unittest discover -s tests -v
+PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
 Run the baseline mechanics demo:
