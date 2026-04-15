@@ -15,6 +15,7 @@ DEFAULT_BASE_INSTRUCTIONS = (
 DEFAULT_CLEAN_INSTRUCTIONS = (
     "If your search becomes confusing or unproductive, explain the reset and emit <clean>."
 )
+QUESTION_PREFIX = "Question:"
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,15 @@ class PromptExample:
     prompt: str
     response: str
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ReasoningPromptParts:
+    """Structured parts extracted from a reasoning prompt."""
+
+    base_instructions: str
+    clean_instructions: str | None
+    question: str
 
 
 def build_reasoning_prompt(
@@ -36,8 +46,29 @@ def build_reasoning_prompt(
     parts = [base_instructions.strip()]
     if allow_clean:
         parts.append(clean_instructions.strip())
-    parts.append(f"Question: {question.strip()}")
+    parts.append(f"{QUESTION_PREFIX} {question.strip()}")
     return "\n\n".join(part for part in parts if part)
+
+
+def parse_reasoning_prompt(prompt: str) -> ReasoningPromptParts:
+    """Recover instructions and question text from a prepared prompt."""
+
+    text = prompt.strip()
+    question_marker = f"\n\n{QUESTION_PREFIX}"
+    if question_marker in text:
+        prefix, question_block = text.rsplit(question_marker, 1)
+    elif text.startswith(QUESTION_PREFIX):
+        prefix = ""
+        question_block = text[len(QUESTION_PREFIX) :]
+    else:
+        raise ValueError("Prompt does not contain a recoverable question block.")
+
+    instruction_parts = [part.strip() for part in prefix.split("\n\n") if part.strip()]
+    return ReasoningPromptParts(
+        base_instructions=instruction_parts[0] if instruction_parts else "",
+        clean_instructions="\n\n".join(instruction_parts[1:]) or None,
+        question=question_block.strip(),
+    )
 
 
 def build_sft_training_example(

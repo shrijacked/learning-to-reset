@@ -8,6 +8,7 @@ from learning_to_reset.prompts import (
     build_countdown_prompt,
     build_reasoning_prompt,
     build_sft_training_example,
+    parse_reasoning_prompt,
 )
 
 
@@ -124,6 +125,16 @@ class DataPipelineTests(unittest.TestCase):
 
         self.assertIn("Reach 24 using 9, 8, 3, 1.", prompt)
         self.assertIn("<clean>", prompt)
+
+    def test_parse_reasoning_prompt_recovers_question_and_clean_instructions(self) -> None:
+        prompt = build_reasoning_prompt("Reach 68 using 60, 27, 19.", allow_clean=True)
+
+        parsed = parse_reasoning_prompt(prompt)
+
+        self.assertIn("<answer>", parsed.base_instructions)
+        self.assertIsNotNone(parsed.clean_instructions)
+        self.assertIn("<clean>", parsed.clean_instructions or "")
+        self.assertEqual(parsed.question, "Reach 68 using 60, 27, 19.")
 
 
 if __name__ == "__main__":

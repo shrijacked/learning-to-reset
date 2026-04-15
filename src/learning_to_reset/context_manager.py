@@ -44,6 +44,18 @@ def extract_answer_text(response: str) -> Optional[str]:
     return answers[-1].strip()
 
 
+def response_requests_clean_retry(response: str, clean_token: str = "<clean>") -> bool:
+    """Return whether the response asks for a retry instead of ending with an answer."""
+
+    lowered = response.lower()
+    clean_index = lowered.rfind(clean_token.lower())
+    if clean_index == -1:
+        return False
+
+    answer_index = lowered.rfind("</answer>")
+    return answer_index == -1 or clean_index > answer_index
+
+
 def manage_single_clean_cycle(
     *,
     question: str,
@@ -56,7 +68,7 @@ def manage_single_clean_cycle(
     """Execute the current single-use context reset protocol."""
 
     initial_prompt = build_initial_prompt(question, base_instructions, clean_instructions)
-    cleaned = clean_token in initial_response
+    cleaned = response_requests_clean_retry(initial_response, clean_token=clean_token)
 
     if cleaned and retry_response is None:
         raise ValueError("A retry response is required when the initial response emits <clean>.")

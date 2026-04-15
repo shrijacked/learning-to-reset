@@ -6,6 +6,7 @@ from learning_to_reset.context_manager import (
     build_retry_prompt,
     extract_answer_text,
     manage_single_clean_cycle,
+    response_requests_clean_retry,
 )
 from learning_to_reset.countdown_verifier import (
     VerificationResult,
@@ -22,6 +23,12 @@ from learning_to_reset.dataset_prep import (
     write_prompt_examples_jsonl,
 )
 from learning_to_reset.demo import DemoSnapshot, build_demo_report, build_demo_snapshot
+from learning_to_reset.eval_runtime import (
+    build_countdown_sample_from_example,
+    evaluate_countdown_outputs,
+    generate_countdown_responses,
+    write_evaluation_outputs,
+)
 from learning_to_reset.pipeline import (
     DatasetSplit,
     PromptBatch,
@@ -32,9 +39,11 @@ from learning_to_reset.pipeline import (
 )
 from learning_to_reset.prompts import (
     PromptExample,
+    ReasoningPromptParts,
     build_countdown_prompt,
     build_reasoning_prompt,
     build_sft_training_example,
+    parse_reasoning_prompt,
 )
 from learning_to_reset.rloo import (
     ModifiedRLOOResult,
@@ -43,6 +52,31 @@ from learning_to_reset.rloo import (
     compute_leave_one_out_advantages,
     compute_modified_rloo_terms,
     compute_total_reward,
+)
+from learning_to_reset.rloo_runtime import (
+    RolloutCandidate,
+    RolloutSegment,
+    build_policy_trajectory_sample,
+    build_rollout_candidate,
+    compute_policy_loss,
+    evaluate_reset_aware_model,
+    evaluate_rollout_candidates,
+    rollout_countdown_example,
+    summarize_rollout_candidates,
+    train_rloo,
+)
+from learning_to_reset.rollout_runtime import (
+    CleanTrajectory,
+    RewardBreakdown,
+    build_clean_trajectory,
+    compute_countdown_reward,
+)
+from learning_to_reset.sft_runtime import (
+    PromptCollator,
+    load_prepared_examples,
+    render_training_text,
+    tokenize_training_example,
+    train_sft,
 )
 from learning_to_reset.trace_curation import (
     CuratedTrace,
@@ -54,15 +88,25 @@ from learning_to_reset.trace_curation import (
 __all__ = [
     "CuratedTrace",
     "CountdownSample",
+    "CleanTrajectory",
     "DatasetSplit",
     "DemoSnapshot",
     "VerificationResult",
+    "RewardBreakdown",
+    "build_countdown_sample_from_example",
+    "build_clean_trajectory",
+    "evaluate_countdown_outputs",
     "export_prepared_datasets",
+    "generate_countdown_responses",
     "ManagedGeneration",
     "ModifiedRLOOResult",
     "NormalizedTrace",
     "PromptBatch",
+    "PromptCollator",
     "PromptExample",
+    "ReasoningPromptParts",
+    "RolloutCandidate",
+    "RolloutSegment",
     "TraceRecord",
     "TrajectorySample",
     "TrajectoryTerm",
@@ -72,25 +116,41 @@ __all__ = [
     "build_retry_prompt",
     "build_demo_report",
     "build_demo_snapshot",
+    "build_policy_trajectory_sample",
     "build_reasoning_prompt",
+    "build_rollout_candidate",
     "build_sft_training_example",
     "compute_leave_one_out_advantages",
     "compute_modified_rloo_terms",
+    "compute_policy_loss",
     "compute_total_reward",
+    "compute_countdown_reward",
     "curate_trace",
+    "evaluate_reset_aware_model",
+    "evaluate_rollout_candidates",
     "extract_answer_expression",
     "extract_answer_text",
     "load_countdown_samples",
     "load_trace_records",
+    "load_prepared_examples",
     "manage_single_clean_cycle",
     "normalize_trace",
+    "parse_reasoning_prompt",
     "prepare_countdown_examples",
     "prepare_countdown_split",
     "prepare_sft_examples",
     "prepare_trace_split",
+    "response_requests_clean_retry",
+    "rollout_countdown_example",
     "score_countdown_response",
     "serialize_prompt_example",
     "split_sequence",
+    "summarize_rollout_candidates",
+    "render_training_text",
+    "tokenize_training_example",
+    "train_rloo",
+    "train_sft",
     "verify_countdown_expression",
+    "write_evaluation_outputs",
     "write_prompt_examples_jsonl",
 ]

@@ -79,6 +79,7 @@ def prepare_countdown_examples(
                     "numbers": sample.numbers,
                     "target": sample.target,
                     "solution": sample.solution,
+                    "question": sample.question,
                 },
             )
         )

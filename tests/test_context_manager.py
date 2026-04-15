@@ -4,6 +4,7 @@ from learning_to_reset.context_manager import (
     build_initial_prompt,
     build_retry_prompt,
     manage_single_clean_cycle,
+    response_requests_clean_retry,
 )
 
 
@@ -57,6 +58,13 @@ class ContextManagerTests(unittest.TestCase):
 
         self.assertIn("Clean instructions", initial_prompt)
         self.assertNotIn("Clean instructions", retry_prompt)
+
+    def test_answer_after_clean_token_does_not_force_retry(self) -> None:
+        self.assertFalse(
+            response_requests_clean_retry(
+                "<think>Recovered.</think><clean><answer>68</answer>"
+            )
+        )
 
 
 if __name__ == "__main__":
