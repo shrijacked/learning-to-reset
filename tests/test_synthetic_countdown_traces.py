@@ -56,6 +56,21 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
         self.assertTrue(records[0]["is_correct"])
         self.assertFalse(records[1]["is_correct"])
 
+    def test_build_synthetic_trace_records_can_emit_multiple_solution_variants(self) -> None:
+        records, skipped = build_synthetic_trace_records(
+            [self.sample],
+            solutions_per_sample=2,
+        )
+
+        self.assertEqual(skipped, 0)
+        self.assertEqual(len(records), 4)
+        positive_records = [record for record in records if record["is_correct"]]
+        self.assertEqual(len(positive_records), 2)
+        self.assertEqual(
+            len({record["metadata"]["solution_expression"] for record in positive_records}),
+            2,
+        )
+
     def test_generate_synthetic_trace_corpus_writes_jsonl(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             countdown_path = Path(tmp_dir) / "countdown.jsonl"
@@ -71,11 +86,12 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
             summary = generate_synthetic_trace_corpus(
                 countdown_path=countdown_path,
                 output_path=output_path,
+                solutions_per_sample=2,
             )
             lines = output_path.read_text(encoding="utf-8").splitlines()
 
-        self.assertEqual(summary["records_written"], 2)
-        self.assertEqual(len(lines), 2)
+        self.assertEqual(summary["records_written"], 4)
+        self.assertEqual(len(lines), 4)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Iterable, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 
 @dataclass(frozen=True)
@@ -13,12 +13,6 @@ class CountdownExpression:
 
     value: Fraction
     expression: str
-
-
-def _state_key(items: Sequence[CountdownExpression]) -> Tuple[Tuple[int, int], ...]:
-    return tuple(
-        sorted((item.value.numerator, item.value.denominator) for item in items)
-    )
 
 
 def _combine_pair(
@@ -71,28 +65,36 @@ def _combine_pair(
     return tuple(deduplicated)
 
 
-def solve_countdown(numbers: Sequence[int], target: int) -> Optional[str]:
-    """Find one legal arithmetic expression that reaches the target, if one exists."""
+def solve_countdown_variants(
+    numbers: Sequence[int],
+    target: int,
+    *,
+    max_solutions: int = 4,
+) -> Tuple[str, ...]:
+    """Find multiple legal arithmetic expressions that reach the target."""
+
+    if max_solutions <= 0:
+        raise ValueError("max_solutions must be positive.")
 
     target_value = Fraction(int(target))
     initial = tuple(
         CountdownExpression(value=Fraction(int(number)), expression=str(int(number)))
         for number in numbers
     )
-    seen = set()
+    solutions: List[str] = []
+    seen_expressions = set()
 
-    def search(items: Sequence[CountdownExpression]) -> Optional[str]:
+    def search(items: Sequence[CountdownExpression]) -> None:
         for item in items:
             if item.value == target_value:
-                return item.expression
+                if item.expression not in seen_expressions:
+                    seen_expressions.add(item.expression)
+                    solutions.append(item.expression)
+                    if len(solutions) >= max_solutions:
+                        return
 
-        if len(items) < 2:
-            return None
-
-        key = _state_key(items)
-        if key in seen:
-            return None
-        seen.add(key)
+        if len(items) < 2 or len(solutions) >= max_solutions:
+            return
 
         for left_index in range(len(items)):
             for right_index in range(left_index + 1, len(items)):
@@ -104,10 +106,16 @@ def solve_countdown(numbers: Sequence[int], target: int) -> Optional[str]:
                     if item_index not in {left_index, right_index}
                 )
                 for candidate in _combine_pair(left, right):
-                    solved = search(remainder + (candidate,))
-                    if solved is not None:
-                        return solved
-        return None
+                    search(remainder + (candidate,))
+                    if len(solutions) >= max_solutions:
+                        return
 
-    return search(initial)
+    search(initial)
+    return tuple(solutions)
 
+
+def solve_countdown(numbers: Sequence[int], target: int) -> Optional[str]:
+    """Find one legal arithmetic expression that reaches the target, if one exists."""
+
+    variants = solve_countdown_variants(numbers, target, max_solutions=1)
+    return variants[0] if variants else None

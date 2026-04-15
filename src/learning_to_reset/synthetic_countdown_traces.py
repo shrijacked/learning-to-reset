@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from learning_to_reset.countdown_solver import solve_countdown
+from learning_to_reset.countdown_solver import solve_countdown, solve_countdown_variants
 from learning_to_reset.countdown_verifier import verify_countdown_expression
 from learning_to_reset.data import CountdownSample, load_countdown_samples
 from learning_to_reset.paper_sources import write_jsonl_records
@@ -134,25 +134,48 @@ def build_synthetic_trace_records(
     samples: Iterable[CountdownSample],
     *,
     include_negative: bool = True,
+    solutions_per_sample: int = 1,
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Build a paired synthetic trace corpus from Countdown samples."""
+
+    if solutions_per_sample <= 0:
+        raise ValueError("solutions_per_sample must be positive.")
 
     records: List[Dict[str, Any]] = []
     skipped = 0
     for sample in samples:
-        solution_expression = sample.solution or solve_countdown(sample.numbers, sample.target)
-        if solution_expression is None:
+        if sample.solution is not None:
+            solution_expressions = (sample.solution,)
+        else:
+            solution_expressions = solve_countdown_variants(
+                sample.numbers,
+                sample.target,
+                max_solutions=solutions_per_sample,
+            )
+        if not solution_expressions:
             skipped += 1
             continue
 
-        records.append(
-            build_positive_trace_record(
-                sample,
-                solution_expression=solution_expression,
+        for solution_expression in solution_expressions:
+            records.append(
+                build_positive_trace_record(
+                    sample,
+                    solution_expression=solution_expression,
+                )
             )
-        )
-        if include_negative:
-            records.append(build_negative_trace_record(sample))
+            if include_negative:
+                records.append(
+                    build_negative_trace_record(
+                        CountdownSample(
+                            numbers=sample.numbers,
+                            target=sample.target,
+                            question=sample.question,
+                            source_id=sample.source_id,
+                            solution=solution_expression,
+                            metadata=dict(sample.metadata),
+                        )
+                    )
+                )
     return records, skipped
 
 
@@ -162,6 +185,7 @@ def generate_synthetic_trace_corpus(
     output_path: str | Path,
     max_samples: int | None = None,
     include_negative: bool = True,
+    solutions_per_sample: int = 1,
 ) -> Dict[str, Any]:
     """Write a synthetic Countdown-aligned trace corpus to JSONL."""
 
@@ -172,6 +196,7 @@ def generate_synthetic_trace_corpus(
     records, skipped = build_synthetic_trace_records(
         samples,
         include_negative=include_negative,
+        solutions_per_sample=solutions_per_sample,
     )
     write_jsonl_records(records, output_path)
 
@@ -180,6 +205,7 @@ def generate_synthetic_trace_corpus(
         "records_written": len(records),
         "skipped_unsolved": skipped,
         "include_negative": include_negative,
+        "solutions_per_sample": solutions_per_sample,
         "output_path": str(output_path),
     }
     Path(output_path).with_suffix(".summary.json").write_text(
@@ -201,6 +227,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Write only productive traces and skip synthetic negative traces.",
     )
+    parser.add_argument(
+        "--solutions-per-sample",
+        type=int,
+        default=1,
+        help="Maximum number of distinct solved expressions to emit per Countdown sample.",
+    )
     return parser
 
 
@@ -211,6 +243,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         output_path=args.output_path,
         max_samples=args.max_samples,
         include_negative=not args.positive_only,
+        solutions_per_sample=args.solutions_per_sample,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=True))
     return 0

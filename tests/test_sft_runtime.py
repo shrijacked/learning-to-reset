@@ -30,6 +30,12 @@ class DummyTokenizer:
 
 
 class SFTRuntimeTests(unittest.TestCase):
+    @staticmethod
+    def _materialize_batch_values(values):
+        if hasattr(values, "tolist"):
+            return values.tolist()
+        return values
+
     def test_load_prepared_examples_reads_jsonl_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = Path(tmp_dir) / "prepared.jsonl"
@@ -78,8 +84,14 @@ class SFTRuntimeTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(batch["input_ids"], [[1, 2, 3], [4, 0, 0]])
-        self.assertEqual(batch["labels"], [[-100, 2, 3], [-100, -100, -100]])
+        self.assertEqual(
+            self._materialize_batch_values(batch["input_ids"]),
+            [[1, 2, 3], [4, 0, 0]],
+        )
+        self.assertEqual(
+            self._materialize_batch_values(batch["labels"]),
+            [[-100, 2, 3], [-100, -100, -100]],
+        )
 
 
 if __name__ == "__main__":
