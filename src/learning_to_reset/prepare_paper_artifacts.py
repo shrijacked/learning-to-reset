@@ -29,6 +29,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not include clean instructions in prepared Countdown prompts.",
     )
+    parser.add_argument(
+        "--include-recovery-examples",
+        action="store_true",
+        help="Append retry-stage recovery examples for traces that provide explicit recovery responses.",
+    )
     return parser
 
 
@@ -42,6 +47,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         sft_val_ratio=args.sft_val_ratio,
         countdown_val_ratio=args.countdown_val_ratio,
         allow_clean=not args.disallow_clean,
+        include_recovery_examples=args.include_recovery_examples,
     )
     print(json.dumps(manifest, indent=2, ensure_ascii=True))
     return 0

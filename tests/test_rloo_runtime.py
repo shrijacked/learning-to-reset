@@ -5,6 +5,7 @@ from learning_to_reset.context_manager import build_retry_prompt
 from learning_to_reset.prompts import DEFAULT_BASE_INSTRUCTIONS, build_reasoning_prompt
 from learning_to_reset.rloo import compute_modified_rloo_terms
 from learning_to_reset.rloo_runtime import (
+    build_generation_kwargs,
     build_rollout_candidate,
     compute_policy_loss,
     summarize_rollout_candidates,
@@ -12,6 +13,26 @@ from learning_to_reset.rloo_runtime import (
 
 
 class RLOORuntimeTests(unittest.TestCase):
+    def test_build_generation_kwargs_blocks_clean_token_when_not_allowed(self) -> None:
+        class TokenizerStub:
+            pad_token_id = 0
+            eos_token_id = 1
+
+            def encode(self, text, add_special_tokens=False):
+                if text == "<clean>" and not add_special_tokens:
+                    return [42]
+                return [7]
+
+        kwargs = build_generation_kwargs(
+            TokenizerStub(),
+            max_new_tokens=64,
+            temperature=0.0,
+            top_p=1.0,
+            allow_clean=False,
+        )
+
+        self.assertEqual(kwargs["bad_words_ids"], [[42]])
+
     def test_build_rollout_candidate_uses_correctness_reward_for_policy_by_default(self) -> None:
         example = {
             "prompt": build_reasoning_prompt(

@@ -6,7 +6,12 @@ from dataclasses import dataclass
 from typing import Generic, Sequence, Tuple, TypeVar
 
 from learning_to_reset.data import CountdownSample, TraceRecord
-from learning_to_reset.prompts import PromptExample, build_countdown_prompt, build_sft_training_example
+from learning_to_reset.prompts import (
+    PromptExample,
+    build_countdown_prompt,
+    build_reasoning_prompt,
+    build_sft_training_example,
+)
 
 
 T = TypeVar("T")
@@ -55,10 +60,41 @@ def split_sequence(
     )
 
 
-def prepare_sft_examples(records: Sequence[TraceRecord]) -> Tuple[PromptExample, ...]:
+def prepare_retry_recovery_examples(records: Sequence[TraceRecord]) -> Tuple[PromptExample, ...]:
+    """Build retry-stage recovery examples for records that carry explicit recovery targets."""
+
+    examples = []
+    for record in records:
+        recovery_response = record.metadata.get("recovery_response")
+        if record.is_correct or not recovery_response:
+            continue
+
+        examples.append(
+            PromptExample(
+                prompt=build_reasoning_prompt(record.problem, allow_clean=False),
+                response=str(recovery_response).strip(),
+                metadata={
+                    "source_id": record.source_id,
+                    "is_correct": True,
+                    "uses_clean": False,
+                    "stage": "retry-recovery",
+                },
+            )
+        )
+    return tuple(examples)
+
+
+def prepare_sft_examples(
+    records: Sequence[TraceRecord],
+    *,
+    include_recovery_examples: bool = False,
+) -> Tuple[PromptExample, ...]:
     """Convert trace records into prompt/response examples for SFT."""
 
-    return tuple(build_sft_training_example(record) for record in records)
+    examples = [build_sft_training_example(record) for record in records]
+    if include_recovery_examples:
+        examples.extend(prepare_retry_recovery_examples(records))
+    return tuple(examples)
 
 
 def prepare_countdown_examples(

@@ -42,6 +42,11 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
         self.assertFalse(record["is_correct"])
         self.assertTrue(verification.is_valid)
         self.assertFalse(verification.reaches_target)
+        self.assertIn("recovery_response", record)
+
+        recovery_verification = score_countdown_response(record["recovery_response"], self.sample)
+        self.assertTrue(recovery_verification.is_valid)
+        self.assertTrue(recovery_verification.reaches_target)
 
     def test_build_synthetic_trace_records_returns_paired_records(self) -> None:
         records, skipped = build_synthetic_trace_records([self.sample])

@@ -42,6 +42,24 @@ def build_positive_trace_record(
     }
 
 
+def build_recovery_response(
+    sample: CountdownSample,
+    *,
+    solution_expression: str,
+) -> str:
+    """Create a retry-stage response that rebuilds the solution after cleaning."""
+
+    return (
+        "<think>\n"
+        "After resetting the scratch work, I can rebuild the solution from a fresh start. "
+        f"A valid construction is {solution_expression}.\n"
+        "</think>\n"
+        "<answer>\n"
+        f"{solution_expression}\n"
+        "</answer>"
+    )
+
+
 def build_negative_expression(sample: CountdownSample) -> str:
     """Pick a simple legal expression that stays off target for reset supervision."""
 
@@ -80,6 +98,11 @@ def build_negative_trace_record(sample: CountdownSample) -> Dict[str, Any]:
     """Create an unproductive tagged trace that the curator can turn into `<clean>`."""
 
     incorrect_expression = build_negative_expression(sample)
+    solution_expression = sample.solution or solve_countdown(sample.numbers, sample.target)
+    if solution_expression is None:
+        raise ValueError(
+            f"Could not build a recovery response for sample {sample.source_id!r}."
+        )
     return {
         "source_id": f"{sample.source_id or 'countdown'}:synthetic-negative",
         "problem": sample.question,
@@ -92,12 +115,17 @@ def build_negative_trace_record(sample: CountdownSample) -> Dict[str, Any]:
             f"{incorrect_expression}\n"
             "</answer>"
         ),
+        "recovery_response": build_recovery_response(
+            sample,
+            solution_expression=solution_expression,
+        ),
         "is_correct": False,
         "metadata": {
             "source": "synthetic_countdown_solver",
             "numbers": list(sample.numbers),
             "target": sample.target,
             "incorrect_expression": incorrect_expression,
+            "solution_expression": solution_expression,
         },
     }
 
@@ -190,4 +218,3 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

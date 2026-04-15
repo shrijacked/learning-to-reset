@@ -264,6 +264,34 @@ def _trim_generated_ids(token_ids: Sequence[int], tokenizer: Any) -> Tuple[int, 
     return tuple(trimmed)
 
 
+def build_generation_kwargs(
+    tokenizer: Any,
+    *,
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+    allow_clean: bool = True,
+) -> Dict[str, Any]:
+    """Build generation kwargs and optionally suppress another `<clean>` emission."""
+
+    do_sample = temperature > 0
+    generation_kwargs: Dict[str, Any] = {
+        "max_new_tokens": max_new_tokens,
+        "do_sample": do_sample,
+        "pad_token_id": tokenizer.pad_token_id,
+        "eos_token_id": tokenizer.eos_token_id,
+    }
+    if do_sample:
+        generation_kwargs["temperature"] = max(temperature, 1e-5)
+        generation_kwargs["top_p"] = top_p
+
+    if not allow_clean:
+        clean_token_ids = list(tokenizer.encode("<clean>", add_special_tokens=False))
+        if clean_token_ids:
+            generation_kwargs["bad_words_ids"] = [clean_token_ids]
+    return generation_kwargs
+
+
 def _generate_segment(
     *,
     model: Any,
@@ -273,23 +301,21 @@ def _generate_segment(
     max_new_tokens: int,
     temperature: float,
     top_p: float,
+    allow_clean: bool = True,
 ) -> RolloutSegment:
     torch, _, _ = _require_transformers()
     encoded = tokenizer(prompt, return_tensors="pt")
     encoded = {key: value.to(device) for key, value in encoded.items()}
-    do_sample = temperature > 0
 
     was_training = model.training
     model.eval()
-    generation_kwargs = {
-        "max_new_tokens": max_new_tokens,
-        "do_sample": do_sample,
-        "pad_token_id": tokenizer.pad_token_id,
-        "eos_token_id": tokenizer.eos_token_id,
-    }
-    if do_sample:
-        generation_kwargs["temperature"] = max(temperature, 1e-5)
-        generation_kwargs["top_p"] = top_p
+    generation_kwargs = build_generation_kwargs(
+        tokenizer,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        top_p=top_p,
+        allow_clean=allow_clean,
+    )
     with torch.no_grad():
         generation = model.generate(
             **encoded,
@@ -325,6 +351,7 @@ def rollout_countdown_example(
         max_new_tokens=max_new_tokens,
         temperature=temperature,
         top_p=top_p,
+        allow_clean=True,
     )
 
     retry = None
@@ -343,6 +370,7 @@ def rollout_countdown_example(
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             top_p=top_p,
+            allow_clean=False,
         )
 
     return build_rollout_candidate(
