@@ -29,6 +29,19 @@ from learning_to_reset.eval_runtime import (
     generate_countdown_responses,
     write_evaluation_outputs,
 )
+from learning_to_reset.paper_dataset_prep import export_paper_prepared_datasets
+from learning_to_reset.paper_sources import (
+    DEFAULT_COUNTDOWN_EVAL_DATASET_ID,
+    DEFAULT_COUNTDOWN_TRAIN_DATASET_ID,
+    DEFAULT_REFERENCE_TRACE_DATASET_ID,
+    DEFAULT_TARGET_MODEL_ID,
+    DEFAULT_TRACE_SOURCE_MODEL_ID,
+    expand_countdown_hf_row,
+    extract_behavior_question,
+    fetch_countdown_source_records,
+    parse_countdown_user_prompt,
+    write_jsonl_records,
+)
 from learning_to_reset.pipeline import (
     DatasetSplit,
     PromptBatch,
@@ -78,6 +91,7 @@ from learning_to_reset.sft_runtime import (
     tokenize_training_example,
     train_sft,
 )
+from learning_to_reset.trace_generation import build_trace_record_from_response, generate_trace_records
 from learning_to_reset.trace_curation import (
     CuratedTrace,
     NormalizedTrace,
@@ -89,6 +103,11 @@ __all__ = [
     "CuratedTrace",
     "CountdownSample",
     "CleanTrajectory",
+    "DEFAULT_COUNTDOWN_EVAL_DATASET_ID",
+    "DEFAULT_COUNTDOWN_TRAIN_DATASET_ID",
+    "DEFAULT_REFERENCE_TRACE_DATASET_ID",
+    "DEFAULT_TARGET_MODEL_ID",
+    "DEFAULT_TRACE_SOURCE_MODEL_ID",
     "DatasetSplit",
     "DemoSnapshot",
     "VerificationResult",
@@ -96,8 +115,12 @@ __all__ = [
     "build_countdown_sample_from_example",
     "build_clean_trajectory",
     "evaluate_countdown_outputs",
+    "expand_countdown_hf_row",
     "export_prepared_datasets",
+    "export_paper_prepared_datasets",
+    "extract_behavior_question",
     "generate_countdown_responses",
+    "generate_trace_records",
     "ManagedGeneration",
     "ModifiedRLOOResult",
     "NormalizedTrace",
@@ -128,6 +151,7 @@ __all__ = [
     "curate_trace",
     "evaluate_reset_aware_model",
     "evaluate_rollout_candidates",
+    "fetch_countdown_source_records",
     "extract_answer_expression",
     "extract_answer_text",
     "load_countdown_samples",
@@ -135,6 +159,7 @@ __all__ = [
     "load_prepared_examples",
     "manage_single_clean_cycle",
     "normalize_trace",
+    "parse_countdown_user_prompt",
     "parse_reasoning_prompt",
     "prepare_countdown_examples",
     "prepare_countdown_split",
@@ -146,11 +171,13 @@ __all__ = [
     "serialize_prompt_example",
     "split_sequence",
     "summarize_rollout_candidates",
+    "build_trace_record_from_response",
     "render_training_text",
     "tokenize_training_example",
     "train_rloo",
     "train_sft",
     "verify_countdown_expression",
     "write_evaluation_outputs",
+    "write_jsonl_records",
     "write_prompt_examples_jsonl",
 ]
