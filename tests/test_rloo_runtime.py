@@ -8,6 +8,7 @@ from learning_to_reset.rloo_runtime import (
     build_generation_kwargs,
     build_rollout_candidate,
     compute_policy_loss,
+    evaluate_rollout_candidates,
     summarize_rollout_candidates,
 )
 
@@ -153,6 +154,30 @@ class RLOORuntimeTests(unittest.TestCase):
         self.assertAlmostEqual(summary["accuracy"], 0.5)
         self.assertAlmostEqual(summary["average_score"], 0.55)
         self.assertEqual(summary["clean_trajectory_count"], 1)
+
+    def test_evaluate_rollout_candidates_reports_evaluated_values(self) -> None:
+        candidate = build_rollout_candidate(
+            type(
+                "PromptExampleStub",
+                (),
+                {
+                    "prompt": build_reasoning_prompt("Reach 24 using 9, 8, 3, 1.", allow_clean=True),
+                    "response": "",
+                    "metadata": {
+                        "source_id": "c5",
+                        "numbers": (9, 8, 3, 1),
+                        "target": 24,
+                        "question": "Reach 24 using 9, 8, 3, 1.",
+                    },
+                },
+            )(),
+            initial_response="<think>Wrong.</think><answer>9 + 8 + 3 + 1</answer>",
+            initial_token_ids=(1, 2, 3),
+        )
+
+        summary = evaluate_rollout_candidates((candidate,))
+
+        self.assertEqual(summary["results"][0]["value"], "21")
 
 
 if __name__ == "__main__":

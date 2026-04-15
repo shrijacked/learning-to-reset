@@ -53,6 +53,8 @@ class EvalRuntimeTests(unittest.TestCase):
         self.assertAlmostEqual(summary["accuracy"], 0.5)
         self.assertAlmostEqual(summary["valid_rate"], 1.0)
         self.assertAlmostEqual(summary["average_score"], 0.6)
+        self.assertEqual(summary["results"][0]["value"], "50")
+        self.assertEqual(summary["results"][1]["value"], "21")
 
 
 if __name__ == "__main__":

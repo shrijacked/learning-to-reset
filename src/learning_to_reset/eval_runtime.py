@@ -55,6 +55,7 @@ def evaluate_countdown_outputs(
                 "prompt": example.prompt,
                 "response": response,
                 "expression": verification.expression,
+                "value": str(verification.value) if verification.value is not None else None,
                 "is_valid": verification.is_valid,
                 "reaches_target": verification.reaches_target,
                 "reason": verification.reason,

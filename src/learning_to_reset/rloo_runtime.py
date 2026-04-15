@@ -446,6 +446,7 @@ def evaluate_rollout_candidates(rollouts: Sequence[RolloutCandidate]) -> Dict[st
                 "final_response": rollout.final_response,
                 "cleaned": rollout.cleaned,
                 "expression": verification.expression,
+                "value": str(verification.value) if verification.value is not None else None,
                 "is_valid": verification.is_valid,
                 "reaches_target": verification.reaches_target,
                 "reason": verification.reason,
