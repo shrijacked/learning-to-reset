@@ -17,8 +17,11 @@ Implemented and verified:
 - unit-test coverage for the baseline mechanics
 - a tiny-model smoke run through the reset-aware trainer and evaluator
 - paper-aligned source adapters for the upstream Countdown datasets
+- paper-aligned source adapters for the upstream reference-trace dataset
+- automatic bootstrap from positive reference traces into a paired reset-aware trace corpus
 - a paper-aligned artifact preparation path that keeps external train/eval splits separate
 - a first real local pilot run on fetched source data
+- a live smoke-verified paper-source flow from fetch -> trace bootstrap -> artifact preparation
 - a deterministic Countdown solver and synthetic Countdown-aligned fallback trace generator
 - multi-solution synthetic Countdown supervision and step-by-step arithmetic walkthrough traces
 - automatic resolution of nested `best-checkpoint` and `final-checkpoint` model outputs
@@ -29,7 +32,7 @@ Implemented and verified:
 
 ## Working Baseline
 
-The repository now supports the baseline code path end to end over prepared artifacts. It has not yet been run against the project's real datasets and target model checkpoints.
+The repository now supports the baseline code path end to end over prepared artifacts. The real source-data path is now wired and smoke-verified locally, but the larger target-model experiments are still outstanding.
 
 What works today:
 
@@ -46,6 +49,7 @@ What works today:
 - clean-aware evaluation can retry once after `<clean>` and record score, accuracy, and clean rate
 - training runs emit local metrics and checkpoint outputs for inspection
 - the repo can fetch and flatten the upstream Countdown train/eval datasets into local JSONL source files
+- the repo can fetch positive reference traces and expand them into a paired reset-aware trace corpus
 - the repo can prepare paper-aligned artifacts from those real source files
 - the repo can synthesize Countdown-aligned fallback traces locally when a stronger trace source is unavailable
 - the target Qwen model can complete a first local SFT checkpoint and a first local reset-aware RL checkpoint on a pilot subset
@@ -88,6 +92,7 @@ Observed pilot outcome:
 Interpretation:
 
 - the source wiring and runtime pipeline now work on real fetched assets
+- the real-source fetch path now covers both Countdown prompts and reference traces, not only Countdown
 - the current pilot is still too weak to claim meaningful paper-level performance
 - the raw-vs-reset-aware gap is now directly measured on the held-out slice: reset logic helps validity, while one-pass generation still fails outright
 - the main remaining baseline blocker is no longer formatting or reset behavior; it is arithmetic grounding and target-correctness after the clean step, plus larger compute/data
@@ -95,7 +100,7 @@ Interpretation:
 
 ## Remaining Engineering Work
 
-1. Replace the fallback trace slice with a stronger paper-native expert-trace source.
+1. Scale the fetched reference-trace corpus beyond the tiny smoke slice and decide whether it is strong enough on its own or still needs a Countdown-native expert-trace supplement.
 2. Strengthen the fallback recovery path further so the post-clean retry stage learns arithmetic that is actually consistent with the final expression, not just valid-looking structure.
 3. Expand the paper-aligned Countdown source split beyond the tiny local slice.
 4. Re-run the SFT stage on that larger aligned split.

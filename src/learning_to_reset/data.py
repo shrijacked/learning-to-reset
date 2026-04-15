@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import json
 from pathlib import Path
 import re
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 
 PathLike = Union[str, Path]
@@ -89,6 +89,19 @@ def _coerce_int_list(value: Any) -> Tuple[int, ...]:
     raise ValueError(f"Could not coerce value to integer list: {value!r}")
 
 
+def _collect_metadata(raw: Mapping[str, Any], *, excluded_keys: Sequence[str]) -> Dict[str, Any]:
+    metadata: Dict[str, Any] = {}
+    nested_metadata = raw.get("metadata")
+    if isinstance(nested_metadata, Mapping):
+        metadata.update(dict(nested_metadata))
+
+    for key, value in raw.items():
+        if key in excluded_keys or key == "metadata":
+            continue
+        metadata[key] = value
+    return metadata
+
+
 def render_countdown_question(numbers: Sequence[int], target: int) -> str:
     number_text = ", ".join(str(number) for number in numbers)
     return (
@@ -106,11 +119,9 @@ def load_trace_records(path: PathLike) -> Tuple[TraceRecord, ...]:
         raw_trace = str(_pick_value(raw, ("raw_trace", "trace", "response")))
         is_correct = _coerce_bool(_pick_value(raw, ("is_correct", "correct", "label")))
         source_id = _pick_value(raw, ("source_id", "id", "name"), required=False)
-        metadata = {
-            key: value
-            for key, value in raw.items()
-            if key
-            not in {
+        metadata = _collect_metadata(
+            raw,
+            excluded_keys=(
                 "problem",
                 "question",
                 "prompt",
@@ -123,8 +134,8 @@ def load_trace_records(path: PathLike) -> Tuple[TraceRecord, ...]:
                 "source_id",
                 "id",
                 "name",
-            }
-        }
+            ),
+        )
         records.append(
             TraceRecord(
                 problem=problem,
@@ -147,11 +158,9 @@ def load_countdown_samples(path: PathLike) -> Tuple[CountdownSample, ...]:
         question = _pick_value(raw, ("question", "prompt"), required=False)
         solution = _pick_value(raw, ("solution", "expression", "answer"), required=False)
         source_id = _pick_value(raw, ("source_id", "id", "name"), required=False)
-        metadata = {
-            key: value
-            for key, value in raw.items()
-            if key
-            not in {
+        metadata = _collect_metadata(
+            raw,
+            excluded_keys=(
                 "numbers",
                 "digits",
                 "values",
@@ -166,8 +175,8 @@ def load_countdown_samples(path: PathLike) -> Tuple[CountdownSample, ...]:
                 "source_id",
                 "id",
                 "name",
-            }
-        }
+            ),
+        )
         samples.append(
             CountdownSample(
                 numbers=numbers,

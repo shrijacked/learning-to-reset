@@ -21,7 +21,9 @@
   - clean-aware evaluation
 - Real-source Countdown adapters now exist:
   - upstream train/eval fetch and flattening
+  - reference trace fetch plus paired trace bootstrap
   - paper-aligned artifact preparation from separate train/eval files
+  - a tiny live fetch -> bootstrap -> prep smoke run
 - Trainer outputs can now be evaluated directly from the run root because nested checkpoints resolve automatically.
 - Fallback SFT prep can now:
   - append retry-stage recovery examples
@@ -34,7 +36,7 @@
 
 ## To Do
 
-- Replace the fallback trace source with a stronger paper-native expert-trace source.
+- Scale the fetched reference-trace source beyond the tiny smoke slice and decide whether it needs a stronger Countdown-native supplement.
 - Add better recovery supervision so clean-triggered retries become arithmetic-consistent and target-correct, not just valid-looking.
 - Expand the local Countdown source split beyond the tiny pilot slice.
 - Re-run SFT on the larger paper-aligned split.

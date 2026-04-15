@@ -21,7 +21,7 @@ The repository currently covers three core software primitives:
 - Reset-aware RLOO runtime with local metrics and checkpointing
 - Clean-aware evaluation that retries once after `<clean>` by default
 
-The repository now supports the baseline pipeline over prepared artifacts: prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is wiring the real datasets and model checkpoints into that pipeline and producing the paper-aligned experiment runs.
+The repository now supports the baseline pipeline over prepared artifacts: fetch paper-aligned source files, prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is scaling those real-source paths into stronger paper-aligned experiments and target-model runs.
 
 The latest local pilot now exercises that path on Countdown-aligned fallback traces and real fetched Countdown prompts. The current small CPU-only baseline still scores `0/4` on the held-out slice for target correctness, but it now shows a stable gap between raw one-pass decoding and reset-aware retries: raw generation remains invalid on the hard slice, while reset-aware evaluation reliably reaches valid post-clean arithmetic expressions with `clean_rate = 1.0`.
 
@@ -66,16 +66,17 @@ PYTHONPATH=src python3 -m learning_to_reset.prepare_artifacts \
   --output-dir output/prepared
 ```
 
-Fetch a paper-aligned Countdown subset and prepare real-source artifacts:
+Fetch a paper-aligned source bundle and prepare real-source artifacts:
 
 ```bash
 PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.paper_sources \
   --output-dir tmp/paper-assets \
   --max-train-samples 12 \
-  --max-eval-samples 4
+  --max-eval-samples 4 \
+  --max-reference-trace-rows 64
 
 PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.prepare_paper_artifacts \
-  --traces tmp/paper-assets/reference-positive-traces.jsonl \
+  --traces tmp/paper-assets/reference-traces.jsonl \
   --countdown-train tmp/paper-assets/countdown-train.jsonl \
   --countdown-eval tmp/paper-assets/countdown-eval.jsonl \
   --output-dir tmp/paper-artifacts

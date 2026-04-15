@@ -47,6 +47,31 @@ class DataPipelineTests(unittest.TestCase):
         self.assertEqual(records[1].problem, "Make 12 from 8, 3, 1")
         self.assertFalse(records[1].is_correct)
 
+    def test_load_trace_records_flattens_metadata_mapping(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "traces.jsonl"
+            path.write_text(
+                json.dumps(
+                    {
+                        "id": "trace-1",
+                        "question": "Make 10 from 7, 2, 1",
+                        "trace": "<think>Try something.</think><answer>10</answer>",
+                        "correct": True,
+                        "metadata": {"source_dataset": "paper", "row_index": 3},
+                        "bootstrap_kind": "think_only_negative",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            record = load_trace_records(path)[0]
+
+        self.assertEqual(record.metadata["source_dataset"], "paper")
+        self.assertEqual(record.metadata["row_index"], 3)
+        self.assertEqual(record.metadata["bootstrap_kind"], "think_only_negative")
+        self.assertNotIn("metadata", record.metadata)
+
     def test_load_countdown_samples_renders_question_when_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = Path(tmp_dir) / "countdown.json"
@@ -69,6 +94,30 @@ class DataPipelineTests(unittest.TestCase):
         self.assertEqual(len(samples), 1)
         self.assertIn("25, 7, 3, 2", samples[0].question)
         self.assertIn("50", samples[0].question)
+
+    def test_load_countdown_samples_flattens_metadata_mapping(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "countdown.jsonl"
+            path.write_text(
+                json.dumps(
+                    {
+                        "id": "sample-1",
+                        "numbers": [25, 7, 3, 2],
+                        "target": 50,
+                        "metadata": {"source_dataset": "countdown-env", "row_index": 0},
+                        "difficulty": "hard",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            sample = load_countdown_samples(path)[0]
+
+        self.assertEqual(sample.metadata["source_dataset"], "countdown-env")
+        self.assertEqual(sample.metadata["row_index"], 0)
+        self.assertEqual(sample.metadata["difficulty"], "hard")
+        self.assertNotIn("metadata", sample.metadata)
 
     def test_build_reasoning_prompt_handles_clean_flag(self) -> None:
         with_clean = build_reasoning_prompt("Solve this problem", allow_clean=True)
