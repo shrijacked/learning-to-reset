@@ -23,6 +23,7 @@ The repository currently covers three core software primitives:
 - Clean-aware evaluation that retries once after `<clean>` by default
 - Per-example evaluation diagnostics that record the verifier-computed expression value
 - A comparison utility for raw one-pass versus reset-aware evaluation summaries
+- An opt-in verifier gate for retry-stage recovery examples during SFT artifact preparation
 
 The repository now supports the baseline pipeline over prepared artifacts: fetch paper-aligned source files, prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is improving arithmetic grounding and scaling those real-source paths into stronger target-model runs.
 
@@ -82,7 +83,9 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.prepare_paper_artifacts \
   --traces tmp/paper-assets/reference-traces.jsonl \
   --countdown-train tmp/paper-assets/countdown-train.jsonl \
   --countdown-eval tmp/paper-assets/countdown-eval.jsonl \
-  --output-dir tmp/paper-artifacts
+  --output-dir tmp/paper-artifacts \
+  --include-recovery-examples \
+  --require-recovery-target-correct
 ```
 
 Generate a Countdown-aligned fallback trace set directly from local Countdown prompts:
@@ -146,8 +149,8 @@ tests/                     Regression tests for the current behavior
 
 ## Immediate Next Steps
 
-1. Run the new contrastive recovery trace source through the same SFT/evaluation gate.
-2. Add or acquire a stronger Countdown-native expert-trace source if contrastive traces still do not improve correctness.
+1. Use the strict recovery verifier gate for the next prepared SFT artifact set.
+2. Add or acquire a stronger Countdown-native expert-trace source if strict recovery filtering still does not improve correctness.
 3. Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 4. Scale from local CPU pilots to a larger target-model train/eval run.
 5. Extend the new bounded multi-clean path toward selective retention and recall-aware memory.

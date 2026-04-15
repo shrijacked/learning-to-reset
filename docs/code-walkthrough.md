@@ -20,6 +20,7 @@ The repository now includes a local baseline runtime over prepared artifacts. In
   - builds and parses reasoning prompts with optional clean instructions
 - `src/learning_to_reset/pipeline.py`
   - converts records into split-ready prompt examples
+  - can filter retry-stage recovery examples by verifier-proven Countdown correctness
 - `src/learning_to_reset/dataset_prep.py`
   - exports trainer-ready JSONL artifacts and manifests
 - `src/learning_to_reset/context_manager.py`
@@ -143,6 +144,9 @@ Important pieces:
   - recovers the base instructions, clean instructions, and question from a prepared prompt
 - `prepare_sft_examples(...)` and `prepare_countdown_examples(...)`
   - convert raw records into prompt examples for SFT and Countdown rollouts
+- `prepare_retry_recovery_examples(...)`
+  - appends post-clean recovery examples when records include explicit retry responses
+  - can require those recovery responses to verify against Countdown numbers and target
 - `export_prepared_datasets(...)`
   - writes split JSONL files plus a manifest for later runtimes
 

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, Sequence, Tuple, TypeVar
+import re
+from typing import Any, Generic, Optional, Sequence, Tuple, TypeVar
 
+from learning_to_reset.countdown_verifier import VerificationResult, score_countdown_response
 from learning_to_reset.data import CountdownSample, TraceRecord
 from learning_to_reset.prompts import (
     PromptExample,
@@ -60,10 +62,51 @@ def split_sequence(
     )
 
 
+def _coerce_countdown_numbers(value: Any) -> Tuple[int, ...]:
+    if isinstance(value, (list, tuple)):
+        return tuple(int(item) for item in value)
+    if isinstance(value, str):
+        parts = [part for part in re.split(r"[\s,]+", value.strip()) if part]
+        return tuple(int(part) for part in parts)
+    raise ValueError(f"Could not coerce Countdown numbers: {value!r}")
+
+
+def _countdown_sample_from_record_metadata(record: TraceRecord) -> Optional[CountdownSample]:
+    numbers = record.metadata.get("numbers")
+    target = record.metadata.get("target")
+    if numbers is None or target in (None, ""):
+        return None
+
+    try:
+        return CountdownSample(
+            numbers=_coerce_countdown_numbers(numbers),
+            target=int(target),
+            question=record.problem,
+            source_id=record.source_id,
+        )
+    except (TypeError, ValueError):
+        return None
+
+
+def _verify_recovery_response(
+    record: TraceRecord,
+    recovery_response: str,
+) -> Optional[VerificationResult]:
+    sample = _countdown_sample_from_record_metadata(record)
+    if sample is None:
+        return None
+
+    verification = score_countdown_response(recovery_response, sample)
+    if not verification.is_valid or not verification.reaches_target:
+        return None
+    return verification
+
+
 def prepare_retry_recovery_examples(
     records: Sequence[TraceRecord],
     *,
     repeat: int = 1,
+    require_target_correct: bool = False,
 ) -> Tuple[PromptExample, ...]:
     """Build retry-stage recovery examples for records that carry explicit recovery targets."""
 
@@ -76,17 +119,33 @@ def prepare_retry_recovery_examples(
         if record.is_correct or not recovery_response:
             continue
 
+        verification = None
+        if require_target_correct:
+            verification = _verify_recovery_response(record, str(recovery_response))
+            if verification is None:
+                continue
+
+        metadata = {
+            "source_id": record.source_id,
+            "is_correct": True,
+            "uses_clean": False,
+            "stage": "retry-recovery",
+        }
+        if verification is not None:
+            metadata.update(
+                {
+                    "recovery_expression": verification.expression,
+                    "recovery_value": str(verification.value),
+                    "recovery_verified": True,
+                }
+            )
+
         for _ in range(repeat):
             examples.append(
                 PromptExample(
                     prompt=build_reasoning_prompt(record.problem, allow_clean=False),
                     response=str(recovery_response).strip(),
-                    metadata={
-                        "source_id": record.source_id,
-                        "is_correct": True,
-                        "uses_clean": False,
-                        "stage": "retry-recovery",
-                    },
+                    metadata=dict(metadata),
                 )
             )
     return tuple(examples)
@@ -97,6 +156,7 @@ def prepare_sft_examples(
     *,
     include_recovery_examples: bool = False,
     recovery_repeat: int = 1,
+    require_recovery_target_correct: bool = False,
 ) -> Tuple[PromptExample, ...]:
     """Convert trace records into prompt/response examples for SFT."""
 
@@ -106,6 +166,7 @@ def prepare_sft_examples(
             prepare_retry_recovery_examples(
                 records,
                 repeat=recovery_repeat,
+                require_target_correct=require_recovery_target_correct,
             )
         )
     return tuple(examples)

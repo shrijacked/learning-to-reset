@@ -40,6 +40,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=1,
         help="How many times to repeat each retry-stage recovery example when recovery augmentation is enabled.",
     )
+    parser.add_argument(
+        "--require-recovery-target-correct",
+        action="store_true",
+        help="Only append retry-stage recovery examples whose final answer verifies against Countdown metadata.",
+    )
     return parser
 
 
@@ -55,6 +60,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         allow_clean=not args.disallow_clean,
         include_recovery_examples=args.include_recovery_examples,
         recovery_repeat=args.recovery_repeat,
+        require_recovery_target_correct=args.require_recovery_target_correct,
     )
     print(json.dumps(manifest, indent=2, ensure_ascii=True))
     return 0

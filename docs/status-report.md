@@ -29,6 +29,7 @@ Implemented and verified:
 - a first bounded multi-step cleaning extension with clean-budget and clean-penalty support
 - retry-stage recovery augmentation for fallback SFT preparation
 - a recovery-balance control for repeating retry-stage examples during fallback dataset prep
+- an opt-in verifier gate that keeps only target-correct retry-stage recovery examples when Countdown metadata is available
 - GitHub repository setup and CI for the test suite
 
 ## Working Baseline
@@ -59,6 +60,7 @@ What works today:
 - the target Qwen model can complete local SFT checkpoints and reset-aware RL checkpoints on pilot subsets
 - evaluation can load trainer output roots directly even when the actual model lives inside `best-checkpoint` or `final-checkpoint`
 - fallback SFT preparation can append retry-stage recovery examples and rebalance them explicitly
+- fallback SFT preparation can require retry-stage recovery examples to verify against Countdown numbers and target before appending them
 - the held-out hard slice can now be scored in both raw one-pass mode and reset-aware retry mode from the same checkpoint
 - verifier-grounded SFT ablations can now be compared against the expanded SFT and RLOO checkpoints
 - contrastive recovery SFT ablations can now be compared against the expanded SFT and verifier-grounded checkpoints
@@ -104,8 +106,8 @@ Interpretation:
 
 ## Remaining Engineering Work
 
-1. Add a stronger Countdown-native expert-trace source or filter synthetic recovery traces by target-correct post-clean behavior.
-2. Re-run SFT only after the trace source is expected to improve arithmetic grounding beyond the current `1/8` held-out result.
+1. Re-prepare the next SFT artifact set with the strict retry-recovery verifier gate enabled.
+2. Add a stronger Countdown-native expert-trace source if strict recovery filtering still does not improve arithmetic grounding beyond the current `1/8` held-out result.
 3. Re-run reset-aware RLOO only after the SFT checkpoint produces stronger target-correct retries.
 4. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
 5. Run a larger raw-versus-reset-aware comparison on a broader hard Countdown slice.

@@ -81,6 +81,76 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(len(examples), 4)
         self.assertEqual(sum(int(example.metadata.get("stage") == "retry-recovery") for example in examples), 3)
 
+    def test_prepare_sft_examples_can_require_target_correct_recovery(self) -> None:
+        records = (
+            TraceRecord(
+                source_id="trace-good",
+                problem="Make 10 from 7, 2, 1",
+                raw_trace="<think>Wrong turn.</think><answer>9</answer>",
+                is_correct=False,
+                metadata={
+                    "numbers": [7, 2, 1],
+                    "target": 10,
+                    "recovery_response": (
+                        "<think>Fresh start.</think><answer>((7 + 2) + 1)</answer>"
+                    ),
+                },
+            ),
+            TraceRecord(
+                source_id="trace-bad",
+                problem="Make 10 from 7, 2, 1",
+                raw_trace="<think>Wrong turn.</think><answer>9</answer>",
+                is_correct=False,
+                metadata={
+                    "numbers": [7, 2, 1],
+                    "target": 10,
+                    "recovery_response": (
+                        "<think>Still wrong.</think><answer>(7 + 2)</answer>"
+                    ),
+                },
+            ),
+        )
+
+        examples = prepare_sft_examples(
+            records,
+            include_recovery_examples=True,
+            require_recovery_target_correct=True,
+        )
+
+        recovery_examples = [
+            example
+            for example in examples
+            if example.metadata.get("stage") == "retry-recovery"
+        ]
+        self.assertEqual(len(examples), 3)
+        self.assertEqual(len(recovery_examples), 1)
+        self.assertEqual(recovery_examples[0].metadata["source_id"], "trace-good")
+        self.assertEqual(recovery_examples[0].metadata["recovery_expression"], "((7 + 2) + 1)")
+
+    def test_target_correct_recovery_gate_skips_missing_countdown_metadata(self) -> None:
+        records = (
+            TraceRecord(
+                source_id="trace-missing-metadata",
+                problem="Make 10 from 7, 2, 1",
+                raw_trace="<think>Wrong turn.</think><answer>9</answer>",
+                is_correct=False,
+                metadata={
+                    "recovery_response": (
+                        "<think>Fresh start.</think><answer>((7 + 2) + 1)</answer>"
+                    ),
+                },
+            ),
+        )
+
+        examples = prepare_sft_examples(
+            records,
+            include_recovery_examples=True,
+            require_recovery_target_correct=True,
+        )
+
+        self.assertEqual(len(examples), 1)
+        self.assertEqual(examples[0].metadata["source_id"], "trace-missing-metadata")
+
     def test_prepare_countdown_examples_carries_target_metadata(self) -> None:
         samples = (
             CountdownSample(

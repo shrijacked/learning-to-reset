@@ -52,6 +52,7 @@ flowchart LR
 | R9 | Compare raw and reset-aware evaluation outputs | `main.pdf` Section 4 | `compare_eval_results.py` | `tests/test_compare_eval_results.py` |
 | R10 | Add contrastive recovery trace generation | `main.pdf` Section 3.2.1, Section 4 | `synthetic_countdown_traces.py` | `tests/test_synthetic_countdown_traces.py` |
 | R11 | Gate trace-source ablations by held-out Countdown correctness | `main.pdf` Section 4 | local run artifacts | reset-aware and raw eval summaries |
+| R12 | Filter retry-stage recovery examples by verifier correctness | `main.pdf` Section 4 | `pipeline.py`, `prepare_paper_artifacts.py` | `tests/test_pipeline.py`, `tests/test_paper_dataset_prep.py` |
 | E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | future module | future tests |
 | E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | future module | future tests |
@@ -68,6 +69,7 @@ flowchart LR
 - Raw-vs-reset-aware comparison can now be regenerated from evaluation output directories
 - Verifier-grounded recovery ablations have run, but they currently tie rather than beat the best expanded SFT result
 - Contrastive/all recovery ablation has run, but it regresses below the best expanded SFT result
+- Retry-stage recovery examples can now be filtered by verifier correctness before SFT artifact export
 - Remaining baseline work is stronger arithmetic grounding, larger target-model execution, and broader experiment comparison
 
 ### Extension

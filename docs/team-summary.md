@@ -32,6 +32,7 @@
 - Fallback SFT prep can now:
   - append retry-stage recovery examples
   - rebalance those recovery examples with a repeat factor
+  - require retry-stage recovery examples to verify against Countdown numbers and target
 - First extension work is already in code:
   - bounded multi-step cleaning
   - per-clean penalty support
@@ -51,7 +52,8 @@
 
 ## To Do
 
-- Add or build a stronger Countdown-native expert-trace source, or filter synthetic traces by target-correct post-clean recovery.
+- Re-prepare the next SFT artifact set with the strict retry-recovery verifier gate enabled.
+- Add or build a stronger Countdown-native expert-trace source if strict recovery filtering still does not improve arithmetic correctness.
 - Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 - Scale the local CPU pilot into a larger target-model run.
 - Run raw-versus-reset-aware comparison on a larger hard Countdown slice.
@@ -59,8 +61,8 @@
 
 ## Next Plan
 
-1. Improve the trace source before another expensive target-model run.
-2. Re-run SFT only when the new source is expected to beat the current `1/8` held-out correctness result.
+1. Build the next prepared artifact set using strict target-correct recovery filtering.
+2. Re-run SFT only when the filtered source is expected to beat the current `1/8` held-out correctness result.
 3. Compare the next SFT checkpoint against raw generation, expanded SFT, verifier-grounded SFT, and the RLOO checkpoint.
 4. Run reset-aware RLOO only if the improved SFT checkpoint beats the current held-out correctness gate.
 5. Continue the extension track with selective retention and recall-aware memory after the one-shot baseline is stronger.

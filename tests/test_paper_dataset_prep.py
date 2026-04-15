@@ -154,6 +154,91 @@ class PaperDatasetPrepTests(unittest.TestCase):
         self.assertEqual(len(sft_train_lines), 3)
         self.assertIn('"stage": "retry-recovery"', sft_train_lines[1])
 
+    def test_export_paper_prepared_datasets_can_filter_retry_recovery_examples(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            traces = root / "traces.jsonl"
+            countdown_train = root / "countdown-train.jsonl"
+            countdown_eval = root / "countdown-eval.jsonl"
+            output_dir = root / "prepared"
+
+            traces.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "source_id": "good",
+                                "problem": "Reach 10 using 7, 2, 1.",
+                                "raw_trace": "<think>Wrong.</think><answer>9</answer>",
+                                "is_correct": False,
+                                "numbers": [7, 2, 1],
+                                "target": 10,
+                                "recovery_response": (
+                                    "<think>Fresh.</think><answer>((7 + 2) + 1)</answer>"
+                                ),
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "source_id": "bad",
+                                "problem": "Reach 10 using 7, 2, 1.",
+                                "raw_trace": "<think>Wrong.</think><answer>9</answer>",
+                                "is_correct": False,
+                                "numbers": [7, 2, 1],
+                                "target": 10,
+                                "recovery_response": (
+                                    "<think>Still wrong.</think><answer>(7 + 2)</answer>"
+                                ),
+                            }
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            countdown_train.write_text(
+                json.dumps(
+                    {
+                        "source_id": "c1",
+                        "numbers": [25, 7, 3, 2],
+                        "target": 50,
+                        "question": "Reach 50 using 25, 7, 3, 2.",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            countdown_eval.write_text(
+                json.dumps(
+                    {
+                        "source_id": "c2",
+                        "numbers": [60, 27, 19],
+                        "target": 68,
+                        "question": "Reach 68 using 60, 27, 19.",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            manifest = export_paper_prepared_datasets(
+                trace_path=traces,
+                countdown_train_path=countdown_train,
+                countdown_eval_path=countdown_eval,
+                output_dir=output_dir,
+                sft_val_ratio=0.0,
+                countdown_val_ratio=0.0,
+                allow_clean=True,
+                include_recovery_examples=True,
+                require_recovery_target_correct=True,
+            )
+            sft_train_lines = (output_dir / "sft-train.jsonl").read_text(encoding="utf-8").splitlines()
+
+        self.assertEqual(manifest["sft"]["train"], 3)
+        self.assertTrue(manifest["require_recovery_target_correct"])
+        self.assertEqual(sum('"stage": "retry-recovery"' in line for line in sft_train_lines), 1)
+        self.assertTrue(any('"source_id": "good"' in line for line in sft_train_lines))
+
 
 if __name__ == "__main__":
     unittest.main()
