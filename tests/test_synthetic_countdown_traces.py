@@ -8,6 +8,7 @@ from learning_to_reset.countdown_verifier import score_countdown_response
 from learning_to_reset.synthetic_countdown_traces import (
     build_negative_trace_record,
     build_positive_trace_record,
+    build_solution_walkthrough,
     build_synthetic_trace_records,
     generate_synthetic_trace_corpus,
 )
@@ -34,6 +35,8 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
         self.assertTrue(record["is_correct"])
         self.assertTrue(verification.is_valid)
         self.assertTrue(verification.reaches_target)
+        self.assertIn("Step 1:", record["raw_trace"])
+        self.assertIn("matches the target 70", record["raw_trace"])
 
     def test_negative_trace_record_stays_off_target(self) -> None:
         record = build_negative_trace_record(self.sample)
@@ -43,10 +46,24 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
         self.assertTrue(verification.is_valid)
         self.assertFalse(verification.reaches_target)
         self.assertIn("recovery_response", record)
+        self.assertIn("evaluates to 9 instead of 70", record["raw_trace"])
 
         recovery_verification = score_countdown_response(record["recovery_response"], self.sample)
         self.assertTrue(recovery_verification.is_valid)
         self.assertTrue(recovery_verification.reaches_target)
+        self.assertIn("After resetting the scratch work", record["recovery_response"])
+        self.assertIn("Step 1:", record["recovery_response"])
+
+    def test_build_solution_walkthrough_lists_intermediate_steps(self) -> None:
+        walkthrough = build_solution_walkthrough(
+            self.sample,
+            solution_expression="((9 * 11) - (12 + 17))",
+            after_reset=False,
+        )
+
+        self.assertIn("Compute (9 * 11) = 99.", walkthrough)
+        self.assertIn("Compute (12 + 17) = 29.", walkthrough)
+        self.assertIn("Compute ((9 * 11) - (12 + 17)) = 70.", walkthrough)
 
     def test_build_synthetic_trace_records_returns_paired_records(self) -> None:
         records, skipped = build_synthetic_trace_records([self.sample])

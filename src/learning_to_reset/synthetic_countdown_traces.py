@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
+from fractions import Fraction
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -13,6 +15,87 @@ from learning_to_reset.data import CountdownSample, load_countdown_samples
 from learning_to_reset.paper_sources import write_jsonl_records
 
 
+def _format_fraction(value: Fraction) -> str:
+    if value.denominator == 1:
+        return str(value.numerator)
+    return f"{value.numerator}/{value.denominator}"
+
+
+def _describe_expression_node(node: ast.AST) -> Tuple[str, Fraction, Tuple[str, ...]]:
+    if isinstance(node, ast.Constant) and isinstance(node.value, int):
+        value = Fraction(int(node.value))
+        return str(int(node.value)), value, ()
+
+    if isinstance(node, ast.UnaryOp):
+        operand_expression, operand_value, operand_steps = _describe_expression_node(node.operand)
+        if isinstance(node.op, ast.UAdd):
+            return operand_expression, operand_value, operand_steps
+        if isinstance(node.op, ast.USub):
+            expression = f"(-{operand_expression})"
+            value = -operand_value
+            return (
+                expression,
+                value,
+                operand_steps + (f"Compute {expression} = {_format_fraction(value)}.",),
+            )
+        raise ValueError("Unsupported unary operator in synthetic walkthrough.")
+
+    if isinstance(node, ast.BinOp):
+        left_expression, left_value, left_steps = _describe_expression_node(node.left)
+        right_expression, right_value, right_steps = _describe_expression_node(node.right)
+
+        if isinstance(node.op, ast.Add):
+            operator_symbol = "+"
+            value = left_value + right_value
+        elif isinstance(node.op, ast.Sub):
+            operator_symbol = "-"
+            value = left_value - right_value
+        elif isinstance(node.op, ast.Mult):
+            operator_symbol = "*"
+            value = left_value * right_value
+        elif isinstance(node.op, ast.Div):
+            if right_value == 0:
+                raise ValueError("Division by zero is not allowed in synthetic walkthrough.")
+            operator_symbol = "/"
+            value = left_value / right_value
+        else:
+            raise ValueError("Unsupported binary operator in synthetic walkthrough.")
+
+        expression = f"({left_expression} {operator_symbol} {right_expression})"
+        step = f"Compute {expression} = {_format_fraction(value)}."
+        return expression, value, left_steps + right_steps + (step,)
+
+    raise ValueError("Unsupported syntax in synthetic walkthrough expression.")
+
+
+def build_solution_walkthrough(
+    sample: CountdownSample,
+    *,
+    solution_expression: str,
+    after_reset: bool,
+) -> str:
+    """Render a short arithmetic walkthrough for a solved Countdown expression."""
+
+    parsed = ast.parse(solution_expression, mode="eval")
+    _, value, steps = _describe_expression_node(parsed.body)
+
+    intro = (
+        "After resetting the scratch work, I rebuild the solution carefully."
+        if after_reset
+        else (
+            "I can reach "
+            f"{sample.target} by combining the numbers {list(sample.numbers)} step by step."
+        )
+    )
+    lines = [intro]
+    lines.extend(f"Step {index}: {step}" for index, step in enumerate(steps, start=1))
+    lines.append(
+        "This gives "
+        f"{_format_fraction(value)}, which matches the target {sample.target}."
+    )
+    return "\n".join(lines)
+
+
 def build_positive_trace_record(
     sample: CountdownSample,
     *,
@@ -20,13 +103,17 @@ def build_positive_trace_record(
 ) -> Dict[str, Any]:
     """Create a productive tagged trace for one Countdown sample."""
 
+    walkthrough = build_solution_walkthrough(
+        sample,
+        solution_expression=solution_expression,
+        after_reset=False,
+    )
     return {
         "source_id": f"{sample.source_id or 'countdown'}:synthetic-positive",
         "problem": sample.question,
         "raw_trace": (
             "<think>\n"
-            "I can solve this by combining the available numbers into one expression "
-            f"that reaches {sample.target}. A valid construction is {solution_expression}.\n"
+            f"{walkthrough}\n"
             "</think>\n"
             "<answer>\n"
             f"{solution_expression}\n"
@@ -49,10 +136,14 @@ def build_recovery_response(
 ) -> str:
     """Create a retry-stage response that rebuilds the solution after cleaning."""
 
+    walkthrough = build_solution_walkthrough(
+        sample,
+        solution_expression=solution_expression,
+        after_reset=True,
+    )
     return (
         "<think>\n"
-        "After resetting the scratch work, I can rebuild the solution from a fresh start. "
-        f"A valid construction is {solution_expression}.\n"
+        f"{walkthrough}\n"
         "</think>\n"
         "<answer>\n"
         f"{solution_expression}\n"
@@ -98,6 +189,11 @@ def build_negative_trace_record(sample: CountdownSample) -> Dict[str, Any]:
     """Create an unproductive tagged trace that the curator can turn into `<clean>`."""
 
     incorrect_expression = build_negative_expression(sample)
+    incorrect_verification = verify_countdown_expression(
+        incorrect_expression,
+        numbers=sample.numbers,
+        target=sample.target,
+    )
     solution_expression = sample.solution or solve_countdown(sample.numbers, sample.target)
     if solution_expression is None:
         raise ValueError(
@@ -109,7 +205,10 @@ def build_negative_trace_record(sample: CountdownSample) -> Dict[str, Any]:
         "raw_trace": (
             "<think>\n"
             "I try a straightforward combination first, but it does not actually reach "
-            f"the target. My tentative expression is {incorrect_expression}.\n"
+            "the target. My tentative expression is "
+            f"{incorrect_expression}, which evaluates to "
+            f"{_format_fraction(incorrect_verification.value or Fraction(0))} instead of "
+            f"{sample.target}.\n"
             "</think>\n"
             "<answer>\n"
             f"{incorrect_expression}\n"
