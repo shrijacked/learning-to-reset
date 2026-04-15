@@ -8,6 +8,13 @@ from learning_to_reset.context_manager import (
     manage_single_clean_cycle,
 )
 from learning_to_reset.data import CountdownSample, TraceRecord, load_countdown_samples, load_trace_records
+from learning_to_reset.dataset_prep import (
+    export_prepared_datasets,
+    prepare_countdown_split,
+    prepare_trace_split,
+    serialize_prompt_example,
+    write_prompt_examples_jsonl,
+)
 from learning_to_reset.demo import DemoSnapshot, build_demo_report, build_demo_snapshot
 from learning_to_reset.pipeline import (
     DatasetSplit,
@@ -43,6 +50,7 @@ __all__ = [
     "CountdownSample",
     "DatasetSplit",
     "DemoSnapshot",
+    "export_prepared_datasets",
     "ManagedGeneration",
     "ModifiedRLOOResult",
     "NormalizedTrace",
@@ -69,6 +77,10 @@ __all__ = [
     "manage_single_clean_cycle",
     "normalize_trace",
     "prepare_countdown_examples",
+    "prepare_countdown_split",
     "prepare_sft_examples",
+    "prepare_trace_split",
+    "serialize_prompt_example",
     "split_sequence",
+    "write_prompt_examples_jsonl",
 ]
