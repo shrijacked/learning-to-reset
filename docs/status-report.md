@@ -9,6 +9,7 @@ Implemented and verified:
 - reset-aware RLOO reward and advantage utilities
 - JSON/JSONL dataset loaders for trace and Countdown-style records
 - prompt builders for SFT and reset-aware evaluation inputs
+- deterministic split and batching helpers for trainer preparation
 - unit-test coverage for the baseline mechanics
 - GitHub repository setup and CI for the test suite
 
@@ -23,12 +24,13 @@ What works today:
 - reward propagation for reset-aware training can be inspected and tested
 - trace/countdown records can be loaded into structured dataclasses
 - reasoning prompts and SFT examples can be assembled from those records
+- prepared prompt examples can be split and batched for future trainers
 
 What is not implemented yet:
 
 - wiring the loaders to the real source datasets used by the project
 - countdown evaluation harness around actual model generations
-- batch construction and trainer integration
+- trainer integration on top of the prepared batches
 - full SFT training loop
 - full RLOO training loop
 - experiment tracking for baseline versus reset-aware runs
@@ -36,11 +38,10 @@ What is not implemented yet:
 ## Remaining Engineering Work
 
 1. Point the new loaders at the real expert-trace and Countdown files.
-2. Build prompt batching around the structured records.
-3. Build the first SFT pipeline around the curated traces.
-4. Add the reset-aware RLOO training loop on top of the SFT checkpoint.
-5. Run evaluation on hard Countdown examples and compare against the baseline.
-6. Start extension work only after the baseline pipeline produces stable outputs.
+2. Build the first SFT pipeline around the curated traces and prepared batches.
+3. Add the reset-aware RLOO training loop on top of the SFT checkpoint.
+4. Run evaluation on hard Countdown examples and compare against the baseline.
+5. Start extension work only after the baseline pipeline produces stable outputs.
 
 ## Remaining Non-Engineering Work
 
