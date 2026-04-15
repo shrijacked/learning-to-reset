@@ -18,6 +18,12 @@ Even a simple one-shot `<clean>` mechanism can improve reasoning. The more impor
 Goal:
 - Allow more than one reset in a reasoning episode without creating infinite loops
 
+Current status:
+- A first bounded multi-clean controller now exists locally with:
+  - a reset budget `k`
+  - repeated retry handling
+  - a small per-clean penalty for trajectory scoring
+
 Core changes:
 - Add a reset budget `k > 1`
 - Add a small step-cost penalty for each clean action
@@ -66,3 +72,4 @@ flowchart TD
 - The baseline matches the intended qualitative behavior and core reward logic.
 - Extensions improve hard-example performance without collapsing into excessive resets.
 - The agent becomes more selective over time, not merely more active.
+- Phase 2 is only partially complete until the bounded multi-clean path is connected to stronger training and evaluation runs.

@@ -9,6 +9,8 @@ The repository currently covers three core software primitives:
 - SFT trace curation that teaches the model when to emit `<clean>`
 - A one-shot context manager that handles `y0 -> optional <clean> -> y1`
 - Modified RLOO utilities that propagate the final reward through both segments
+- A synthetic Countdown-aligned fallback trace generator backed by a deterministic solver
+- A bounded multi-clean extension with a reset budget and per-clean penalty
 - Dataset loaders and prompt builders for trace and Countdown-style records
 - Deterministic split and batching helpers for future training/evaluation loops
 - JSONL artifact export and CLI preparation command for trainer-ready splits
@@ -19,6 +21,8 @@ The repository currently covers three core software primitives:
 - Clean-aware evaluation that retries once after `<clean>` by default
 
 The repository now supports the baseline pipeline over prepared artifacts: prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is wiring the real datasets and model checkpoints into that pipeline and producing the paper-aligned experiment runs.
+
+The latest local pilot now exercises that path on Countdown-aligned fallback traces and real fetched Countdown prompts. The current small CPU-only run still scores `0/4` on the held-out slice, but it now exposes a more specific failure mode: the synthetic SFT checkpoint learns to emit `<clean>` reliably and still needs stronger post-clean recovery supervision to produce valid final answers.
 
 ## Project Docs
 
@@ -76,6 +80,14 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.prepare_paper_artifacts \
   --output-dir tmp/paper-artifacts
 ```
 
+Generate a Countdown-aligned fallback trace set directly from local Countdown prompts:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.synthetic_countdown_traces \
+  --countdown tmp/paper-assets/countdown-train.jsonl \
+  --output-path tmp/paper-assets/synthetic-countdown-traces.jsonl
+```
+
 Run SFT on prepared artifacts:
 
 ```bash
@@ -118,8 +130,8 @@ tests/                     Regression tests for the current behavior
 
 ## Immediate Next Steps
 
-1. Replace the provisional positive-trace slice with a stronger usable expert-trace source that yields both correct and incorrect tagged traces.
-2. Scale the pilot from tiny local subsets to a larger paper-style train/eval run.
-3. Improve local/offline model loading so cached Hugging Face models can be reused without network lookups.
+1. Replace the fallback trace source with a stronger paper-native Countdown expert-trace source.
+2. Add recovery-heavy supervision so clean-triggered retries learn to end in `<answer>` instead of repeated `<clean>`.
+3. Scale the pilot from tiny local subsets to a larger paper-style train/eval run.
 4. Re-run the base, SFT, and reset-aware checkpoints on the same held-out hard Countdown slice.
-5. Extend the one-shot cleaner toward multi-step cleaning and selective memory retention.
+5. Extend the new bounded multi-clean path toward selective retention and recall-aware memory.

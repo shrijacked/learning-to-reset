@@ -19,6 +19,9 @@ Implemented and verified:
 - paper-aligned source adapters for the upstream Countdown datasets
 - a paper-aligned artifact preparation path that keeps external train/eval splits separate
 - a first real local pilot run on fetched source data
+- a deterministic Countdown solver and synthetic Countdown-aligned fallback trace generator
+- automatic resolution of nested `best-checkpoint` and `final-checkpoint` model outputs
+- a first bounded multi-step cleaning extension with clean-budget and clean-penalty support
 - GitHub repository setup and CI for the test suite
 
 ## Working Baseline
@@ -41,14 +44,16 @@ What works today:
 - training runs emit local metrics and checkpoint outputs for inspection
 - the repo can fetch and flatten the upstream Countdown train/eval datasets into local JSONL source files
 - the repo can prepare paper-aligned artifacts from those real source files
+- the repo can synthesize Countdown-aligned fallback traces locally when a stronger trace source is unavailable
 - the target Qwen model can complete a first local SFT checkpoint and a first local reset-aware RL checkpoint on a pilot subset
+- evaluation can load trainer output roots directly even when the actual model lives inside `best-checkpoint` or `final-checkpoint`
 
 What is not implemented yet:
 
-- a strong expert-trace source that cleanly provides both productive and unproductive tagged traces for the reset-aware SFT stage
+- a strong paper-native expert-trace source that cleanly provides both productive and unproductive tagged traces for the reset-aware SFT stage
 - a larger paper-style run with enough data and compute to produce nontrivial Countdown accuracy
 - baseline-versus-reset-aware comparison on a properly sized hard Countdown slice
-- extension stages such as multi-step cleaning, selective retention, and recall-aware memory
+- extension stages beyond bounded multi-step cleaning, especially selective retention and recall-aware memory
 
 ## Current Pilot Result
 
@@ -59,21 +64,25 @@ Observed pilot outcome:
 - SFT checkpoint trained successfully on 21 train traces and 3 validation traces
 - reset-aware RL checkpoint ran successfully on 9 Countdown train prompts and 3 validation prompts
 - base, SFT, and reset-aware checkpoints all scored `0/4` on the tiny held-out eval slice
+- a Countdown-aligned synthetic fallback trace run also completed end to end on the same local slice
+- the synthetic SFT checkpoint still scored `0/4`, but it moved `clean_rate` to `1.0`, showing the model learned the reset action more strongly than the recovery action
+- the reset-aware RL stage on top of that synthetic SFT checkpoint also remained `0/4`
 
 Interpretation:
 
 - the source wiring and runtime pipeline now work on real fetched assets
 - the current pilot is still too weak to claim meaningful paper-level performance
-- the next blocker is better trace supervision and a stronger run configuration, not missing plumbing
+- the main remaining baseline blocker is no longer missing plumbing; it is stronger post-clean recovery supervision and larger compute/data
+- the first extension module is now implemented separately from the baseline path, so future work can extend beyond one-shot cleaning without destabilizing the paper baseline
 
 ## Remaining Engineering Work
 
-1. Point the preparation command at the real expert-trace and Countdown files.
-2. Replace the provisional positive-trace slice with a stronger expert-trace source.
+1. Replace the fallback trace slice with a stronger paper-native expert-trace source.
+2. Add recovery-oriented supervision so the post-clean retry path learns to finish with `<answer>`.
 3. Re-run the SFT stage on a larger paper-aligned split.
 4. Re-run the reset-aware RLOO stage on top of that checkpoint.
 5. Evaluate on hard Countdown examples and compare against the default baseline.
-6. Start extension work only after the baseline pipeline produces stable outputs.
+6. Extend the current multi-clean module toward selective retention and recall-aware memory.
 
 ## Remaining Non-Engineering Work
 
@@ -84,5 +93,6 @@ Interpretation:
 ## Recommended Talking Points Right Now
 
 - the technical baseline is no longer just an idea; the core mechanics exist in code and are tested
-- the next meaningful milestone is the first paper-aligned run on the real datasets, not another code scaffold
-- the most important future direction is stronger context management beyond one-shot reset
+- the next meaningful milestone is a paper-native or stronger Countdown-aligned trace source, not another plumbing refactor
+- the model currently learns to clean more easily than it learns to recover, which is exactly where the next baseline and extension work should focus
+- the most important future direction remains stronger context management beyond one-shot reset
