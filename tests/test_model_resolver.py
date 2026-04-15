@@ -10,10 +10,33 @@ class ModelResolverTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             local = Path(tmp_dir) / "model-dir"
             local.mkdir()
+            (local / "config.json").write_text("{}", encoding="utf-8")
 
             resolved = resolve_model_name_or_path(str(local))
 
         self.assertEqual(Path(resolved), local)
+
+    def test_prefers_best_checkpoint_inside_training_output_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_root = Path(tmp_dir) / "run-output"
+            best_dir = output_root / "best-checkpoint"
+            best_dir.mkdir(parents=True)
+            (best_dir / "config.json").write_text("{}", encoding="utf-8")
+
+            resolved = resolve_model_name_or_path(str(output_root))
+
+        self.assertEqual(Path(resolved), best_dir)
+
+    def test_falls_back_to_final_checkpoint_inside_training_output_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_root = Path(tmp_dir) / "run-output"
+            final_dir = output_root / "final-checkpoint"
+            final_dir.mkdir(parents=True)
+            (final_dir / "config.json").write_text("{}", encoding="utf-8")
+
+            resolved = resolve_model_name_or_path(str(output_root))
+
+        self.assertEqual(Path(resolved), final_dir)
 
     def test_prefers_cached_snapshot_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

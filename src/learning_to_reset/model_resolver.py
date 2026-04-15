@@ -9,6 +9,21 @@ def default_hf_cache_root() -> Path:
     return Path.home() / ".cache" / "huggingface" / "hub"
 
 
+def _resolve_local_model_path(local_path: Path) -> Path:
+    if not local_path.exists():
+        return local_path
+    if not local_path.is_dir():
+        return local_path
+    if (local_path / "config.json").exists():
+        return local_path
+
+    for checkpoint_name in ("best-checkpoint", "final-checkpoint"):
+        checkpoint_dir = local_path / checkpoint_name
+        if checkpoint_dir.is_dir() and (checkpoint_dir / "config.json").exists():
+            return checkpoint_dir
+    return local_path
+
+
 def _cached_snapshot_root(model_name_or_path: str, cache_root: Path) -> Path:
     namespace, name = model_name_or_path.split("/", 1)
     return cache_root / f"models--{namespace}--{name}" / "snapshots"
@@ -24,7 +39,7 @@ def resolve_model_name_or_path(
 
     local_path = Path(model_name_or_path)
     if local_path.exists():
-        return str(local_path)
+        return str(_resolve_local_model_path(local_path))
 
     if not prefer_local_cache or "/" not in model_name_or_path:
         return model_name_or_path
