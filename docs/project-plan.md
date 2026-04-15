@@ -49,7 +49,8 @@ flowchart LR
 | R6 | Add reset-aware RLOO runtime | `main.pdf` Section 3.2.3, Section 4.1 | `rloo_runtime.py` | `tests/test_rloo_runtime.py`, tiny-model smoke run |
 | R7 | Keep the repo aligned for later sessions | User request + current workflow | repo-local skill | skill file review |
 | R8 | Add continuous verification for GitHub | repository bootstrap requirement | GitHub Actions workflow | CI run in GitHub |
-| E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | future module | future tests |
+| R9 | Compare raw and reset-aware evaluation outputs | `main.pdf` Section 4 | `compare_eval_results.py` | `tests/test_compare_eval_results.py` |
+| E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | future module | future tests |
 | E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | future module | future tests |
 
@@ -62,11 +63,13 @@ flowchart LR
 - Final reward assigned to the end-to-end interaction
 - Prepared-artifact SFT, reset-aware RLOO, and clean-aware evaluation runtimes exist locally
 - Real-source/local-hybrid SFT, reset-aware RLOO, and raw-vs-reset-aware comparison have run on a CPU pilot
+- Raw-vs-reset-aware comparison can now be regenerated from evaluation output directories
+- Verifier-grounded recovery ablations have run, but they currently tie rather than beat the best expanded SFT result
 - Remaining baseline work is stronger arithmetic grounding, larger target-model execution, and broader experiment comparison
 
 ### Extension
 
-- More than one reset per interaction
+- Bounded multi-clean support exists with a clean budget and per-clean penalty
 - Reward shaping that penalizes excessive resets
 - Selective deletion or summarization instead of full deletion
 - External memory recall or retrieval

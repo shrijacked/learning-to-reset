@@ -8,7 +8,7 @@ This repository currently implements the baseline mechanics for a reset-aware re
 2. let the model emit a special `<clean>` token when its reasoning path becomes unproductive
 3. treat the final interaction outcome as the reward signal, whether the answer comes from the first try or from a retry after reset
 
-The repository now includes a local baseline runtime over prepared artifacts. In practice that means the repo can prepare data, run SFT, run a reset-aware RLOO loop, and evaluate with the one-shot clean retry path. The first local target-model pilots have completed; the strongest current signal is that reset-aware evaluation makes post-clean answers well-formed, while target-correct arithmetic remains the main blocker.
+The repository now includes a local baseline runtime over prepared artifacts. In practice that means the repo can prepare data, run SFT, run a reset-aware RLOO loop, and evaluate with the one-shot clean retry path. The first local target-model pilots and verifier-grounded recovery ablations have completed; the strongest current signal is that reset-aware evaluation makes post-clean answers well-formed, while target-correct arithmetic remains the main blocker.
 
 ## Repo Map
 
@@ -38,8 +38,13 @@ The repository now includes a local baseline runtime over prepared artifacts. In
 - `src/learning_to_reset/eval_runtime.py`
   - runs Countdown evaluation, defaulting to clean-aware retry behavior
   - records the verifier-computed expression value for debugging wrong-target answers
+- `src/learning_to_reset/compare_eval_results.py`
+  - compares raw one-pass and reset-aware evaluation summaries
+  - writes compact JSON and Markdown artifacts for result tables
 - `src/learning_to_reset/rloo_runtime.py`
   - runs reset-aware rollouts, computes policy loss, writes metrics, and saves checkpoints
+- `src/learning_to_reset/multi_clean_extension.py`
+  - implements the bounded multi-clean extension path with a reset budget and per-clean penalty
 - `src/learning_to_reset/demo.py`
   - gives a deterministic walkthrough of the current mechanics
 - `tests/`
@@ -180,6 +185,10 @@ Important pieces:
 - `eval_runtime.py`
   - scores generated Countdown answers
   - defaults to the clean-aware retry path for the paper-style baseline
+- `compare_eval_results.py`
+  - loads two evaluation `summary.json` files
+  - computes candidate-minus-baseline deltas for accuracy, validity, average score, and clean rate
+  - writes `comparison.json` and `comparison.md`
 - `rloo_runtime.py`
   - samples `k` reset-aware trajectories per prompt
   - computes modified-RLOO scaling
@@ -190,6 +199,24 @@ Why they matter:
 
 - this is where the repository stops being only a mechanics demo and becomes a runnable baseline
 - these entrypoints are what you would use to produce the first actual baseline runs
+
+### `multi_clean_extension.py`
+
+This file contains the first extension module.
+
+Important pieces:
+
+- `manage_bounded_clean_cycles(...)`
+  - allows multiple clean requests up to a fixed budget
+  - stops once a normal answer appears or the budget is exhausted
+- `build_multi_clean_trajectory(...)`
+  - computes reward accounting over the bounded interaction
+  - subtracts a small penalty for each clean action
+
+Why it matters:
+
+- it keeps the one-shot baseline stable while giving the extension track a tested place to grow
+- it lets the project study whether extra resets help or whether the model starts using reset too aggressively
 
 ### `demo.py`
 
@@ -277,13 +304,13 @@ Checks that:
 
 The repository does not yet include:
 
-- project-specific wiring to the actual expert-trace and Countdown source files
-- the first paper-aligned runs on the real target model
-- baseline-versus-reset-aware result tables on the hard Countdown slice
-- the extension stages: multi-step cleaning, selective retention, and recall-aware memory
+- a strong expert-trace source with both productive and unproductive tagged Countdown traces
+- a larger target-model run with enough data and compute to produce nontrivial Countdown accuracy
+- a scaled raw-versus-reset-aware table on a larger hard Countdown slice
+- extension stages beyond bounded multi-step cleaning, especially selective retention and recall-aware memory
 
 So the honest state is:
 
 - the baseline mechanics are implemented
 - the local runtime pipeline is in place
-- the remaining gap is experiment execution on the real data and model setup
+- the remaining gap is stronger arithmetic grounding and larger experiment execution

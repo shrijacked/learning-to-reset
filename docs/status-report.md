@@ -55,16 +55,18 @@ What works today:
 - the repo can prepare paper-aligned artifacts from those real source files
 - the repo can synthesize Countdown-aligned fallback traces locally when a stronger trace source is unavailable
 - the synthetic trace generator can emit both walkthrough and verifier-grounded recovery styles for the same solved prompt
+- raw one-pass and reset-aware evaluation summaries can be compared with a repeatable CLI utility
 - the target Qwen model can complete local SFT checkpoints and reset-aware RL checkpoints on pilot subsets
 - evaluation can load trainer output roots directly even when the actual model lives inside `best-checkpoint` or `final-checkpoint`
 - fallback SFT preparation can append retry-stage recovery examples and rebalance them explicitly
 - the held-out hard slice can now be scored in both raw one-pass mode and reset-aware retry mode from the same checkpoint
+- verifier-grounded SFT ablations can now be compared against the expanded SFT and RLOO checkpoints
 
 What is not implemented yet:
 
 - a strong paper-native expert-trace source that cleanly provides both productive and unproductive tagged traces for the reset-aware SFT stage
 - a larger paper-style run with enough data and compute to produce nontrivial Countdown accuracy
-- a properly scaled baseline-versus-reset-aware comparison on a larger hard Countdown slice
+- a properly scaled raw-versus-reset-aware comparison on a larger hard Countdown slice
 - extension stages beyond bounded multi-step cleaning, especially selective retention and recall-aware memory
 
 ## Current Pilot Result
@@ -82,23 +84,28 @@ Observed pilot outcome:
 - a small reset-aware RLOO pass completed on top of that SFT checkpoint with 3 steps, 4 prompts per step, 4 responses per prompt, and `max_new_tokens = 128`
 - RLOO found some correct sampled training rollouts, but the validation subset stayed `0/8` correct
 - the RLOO checkpoint scored `7/8` valid, `1/8` correct, `average_score = 0.225`, and `clean_rate = 1.0` on the same held-out test prompts
+- a verifier-grounded mixed recovery ablation completed at half an epoch with `2010` train examples and `288` validation examples; it scored `8/8` valid, `0/8` correct, and `average_score = 0.10`
+- a balanced verifier-grounded recovery-only ablation completed with `1251` train examples, `179` validation examples, `train_loss = 0.1840`, and `eval_loss = 0.0545`
+- that verification-only checkpoint scored `0/8` valid and `0/8` correct in raw one-pass decoding, but `8/8` valid, `1/8` correct, `average_score = 0.225`, and `clean_rate = 1.0` with reset-aware retry evaluation
 
 Interpretation:
 
 - the source wiring and runtime pipeline now work on real fetched assets plus local Countdown-aligned trace expansion
 - the raw-vs-reset-aware gap is now directly measured on an 8-example held-out slice: reset logic converts raw invalid outputs into valid retry answers
 - the best current local checkpoint is the expanded SFT checkpoint, not the small RLOO checkpoint, because it keeps the same held-out correctness while preserving full validity
+- the balanced verifier-grounded ablation ties the expanded SFT checkpoint on held-out correctness and validity, but does not improve beyond it
+- adding too many verifier-grounded recovery examples can reduce target correctness, so the next data step should improve trace quality rather than simply increasing reset-style volume
 - the current pilot is still too weak to claim strong target-model performance
 - the main remaining baseline blocker is arithmetic grounding: the model often writes plausible step-by-step claims, but the verifier-computed expression value does not match the target
 - the first extension module remains separate from the baseline path, so future multi-clean work can proceed without destabilizing the one-shot baseline
 
 ## Remaining Engineering Work
 
-1. Regenerate the expanded hybrid trace set with verifier-grounded recovery responses enabled.
-2. Re-run the SFT stage on the improved aligned split and preserve the same held-out test comparison.
-3. Add a stronger Countdown-native expert-trace source if verifier-grounded synthetic recovery data is still too weak.
-4. Re-run reset-aware RLOO only after the SFT checkpoint produces stronger target-correct retries.
-5. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
+1. Add a stronger Countdown-native expert-trace source or improve solver-backed trace selection so post-clean retries are target-correct more often.
+2. Re-run SFT only after the trace source improves arithmetic grounding beyond the current `1/8` held-out result.
+3. Re-run reset-aware RLOO only after the SFT checkpoint produces stronger target-correct retries.
+4. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
+5. Run a larger raw-versus-reset-aware comparison on a broader hard Countdown slice.
 6. Extend the current multi-clean module toward selective retention and recall-aware memory.
 
 ## Remaining Non-Engineering Work
@@ -112,6 +119,6 @@ Interpretation:
 - the technical baseline is no longer just an idea; the core mechanics exist in code and are tested
 - the repo now shows a direct held-out separation between raw one-pass failure and reset-aware valid retries
 - the next meaningful milestone is stronger target-correct recovery after the clean step, ideally from a paper-native or larger Countdown-aligned trace source
-- the expanded SFT checkpoint now reaches one target-correct held-out retry, while the small RLOO pass does not improve that held-out result
+- the expanded SFT and balanced verifier-grounded checkpoints both reach one target-correct held-out retry, while the small RLOO pass does not improve that held-out result
 - the model now reliably reaches mostly well-formed post-clean traces on the held-out slice, so the remaining gap is arithmetic correctness rather than reset formatting
 - the most important future direction remains stronger context management beyond one-shot reset
