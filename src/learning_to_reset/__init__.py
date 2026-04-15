@@ -31,6 +31,13 @@ from learning_to_reset.eval_runtime import (
     write_evaluation_outputs,
 )
 from learning_to_reset.model_resolver import default_hf_cache_root, resolve_model_name_or_path
+from learning_to_reset.multi_clean_extension import (
+    ManagedMultiCleanGeneration,
+    MultiCleanSegment,
+    MultiCleanTrajectory,
+    build_multi_clean_trajectory,
+    manage_bounded_clean_cycles,
+)
 from learning_to_reset.paper_dataset_prep import export_paper_prepared_datasets
 from learning_to_reset.paper_sources import (
     DEFAULT_COUNTDOWN_EVAL_DATASET_ID,
@@ -125,6 +132,9 @@ __all__ = [
     "DEFAULT_TRACE_SOURCE_MODEL_ID",
     "DatasetSplit",
     "DemoSnapshot",
+    "ManagedMultiCleanGeneration",
+    "MultiCleanSegment",
+    "MultiCleanTrajectory",
     "VerificationResult",
     "RewardBreakdown",
     "default_hf_cache_root",
@@ -132,6 +142,7 @@ __all__ = [
     "build_bootstrap_negative_record",
     "build_bootstrap_trace_corpus",
     "build_clean_trajectory",
+    "build_multi_clean_trajectory",
     "build_negative_expression",
     "build_negative_trace_record",
     "build_positive_trace_record",
@@ -180,6 +191,7 @@ __all__ = [
     "load_trace_records",
     "load_prepared_examples",
     "manage_single_clean_cycle",
+    "manage_bounded_clean_cycles",
     "normalize_trace",
     "parse_countdown_user_prompt",
     "parse_reasoning_prompt",
