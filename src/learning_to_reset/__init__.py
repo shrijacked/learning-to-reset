@@ -8,6 +8,12 @@ from learning_to_reset.context_manager import (
     manage_single_clean_cycle,
     response_requests_clean_retry,
 )
+from learning_to_reset.compare_eval_results import (
+    build_evaluation_comparison,
+    load_evaluation_summary,
+    render_comparison_markdown,
+    write_comparison_outputs,
+)
 from learning_to_reset.countdown_solver import CountdownExpression, solve_countdown
 from learning_to_reset.countdown_verifier import (
     VerificationResult,
@@ -153,6 +159,7 @@ __all__ = [
     "build_bootstrap_negative_record",
     "build_bootstrap_trace_corpus",
     "build_clean_trajectory",
+    "build_evaluation_comparison",
     "build_multi_clean_trajectory",
     "build_negative_expression",
     "build_negative_trace_record",
@@ -205,6 +212,7 @@ __all__ = [
     "extract_answer_expression",
     "extract_answer_text",
     "load_countdown_samples",
+    "load_evaluation_summary",
     "load_trace_records",
     "load_prepared_examples",
     "manage_single_clean_cycle",
@@ -226,11 +234,13 @@ __all__ = [
     "summarize_rollout_candidates",
     "build_trace_record_from_response",
     "render_training_text",
+    "render_comparison_markdown",
     "tokenize_training_example",
     "train_rloo",
     "train_sft",
     "verify_countdown_expression",
     "write_evaluation_outputs",
+    "write_comparison_outputs",
     "write_bootstrap_trace_corpus",
     "generate_synthetic_trace_corpus",
     "generate_synthetic_countdown_dataset",

@@ -22,6 +22,7 @@ The repository currently covers three core software primitives:
 - Reset-aware RLOO runtime with local metrics and checkpointing
 - Clean-aware evaluation that retries once after `<clean>` by default
 - Per-example evaluation diagnostics that record the verifier-computed expression value
+- A comparison utility for raw one-pass versus reset-aware evaluation summaries
 
 The repository now supports the baseline pipeline over prepared artifacts: fetch paper-aligned source files, prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is improving arithmetic grounding and scaling those real-source paths into stronger target-model runs.
 
@@ -111,6 +112,15 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.eval_runtime \
   --prepared-countdown output/prepared/countdown-test.jsonl \
   --model path/or/model-name \
   --output-dir output/eval/countdown
+```
+
+Compare raw one-pass and reset-aware evaluation runs:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.compare_eval_results \
+  --baseline-dir output/eval/countdown-raw \
+  --candidate-dir output/eval/countdown-reset-aware \
+  --output-dir output/eval/comparison
 ```
 
 Run reset-aware RLOO on prepared Countdown prompts:
