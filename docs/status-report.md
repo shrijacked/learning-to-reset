@@ -10,6 +10,7 @@ Implemented and verified:
 - JSON/JSONL dataset loaders for trace and Countdown-style records
 - prompt builders for SFT and reset-aware evaluation inputs
 - deterministic split and batching helpers for trainer preparation
+- JSONL export and CLI preparation path for trainer-ready splits
 - unit-test coverage for the baseline mechanics
 - GitHub repository setup and CI for the test suite
 
@@ -25,10 +26,11 @@ What works today:
 - trace/countdown records can be loaded into structured dataclasses
 - reasoning prompts and SFT examples can be assembled from those records
 - prepared prompt examples can be split and batched for future trainers
+- split SFT/eval artifacts can be exported as JSONL with a manifest
 
 What is not implemented yet:
 
-- wiring the loaders to the real source datasets used by the project
+- wiring the preparation command to the real source datasets used by the project
 - countdown evaluation harness around actual model generations
 - trainer integration on top of the prepared batches
 - full SFT training loop
@@ -37,8 +39,8 @@ What is not implemented yet:
 
 ## Remaining Engineering Work
 
-1. Point the new loaders at the real expert-trace and Countdown files.
-2. Build the first SFT pipeline around the curated traces and prepared batches.
+1. Point the preparation command at the real expert-trace and Countdown files.
+2. Build the first SFT pipeline around the exported splits.
 3. Add the reset-aware RLOO training loop on top of the SFT checkpoint.
 4. Run evaluation on hard Countdown examples and compare against the baseline.
 5. Start extension work only after the baseline pipeline produces stable outputs.

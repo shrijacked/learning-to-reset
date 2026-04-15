@@ -11,6 +11,7 @@ The repository currently covers three core software primitives:
 - Modified RLOO utilities that propagate the final reward through both segments
 - Dataset loaders and prompt builders for trace and Countdown-style records
 - Deterministic split and batching helpers for future training/evaluation loops
+- JSONL artifact export and CLI preparation command for trainer-ready splits
 
 This is an initial research scaffold, not a full training pipeline yet. The next major milestone is wiring actual datasets and prepared batches into model training and evaluation loops.
 
@@ -39,6 +40,15 @@ Run the baseline mechanics demo:
 PYTHONPATH=src python3 -m learning_to_reset
 ```
 
+Prepare split JSONL artifacts from raw trace and Countdown files:
+
+```bash
+PYTHONPATH=src python3 -m learning_to_reset.prepare_artifacts \
+  --traces path/to/traces.jsonl \
+  --countdown path/to/countdown.jsonl \
+  --output-dir output/prepared
+```
+
 ## Repository Layout
 
 ```text
@@ -51,7 +61,7 @@ tests/                     Regression tests for the current behavior
 
 ## Immediate Next Steps
 
-1. Point the loaders at the actual expert-trace and Countdown source files.
-2. Connect the context manager and modified RLOO math to real training loops.
+1. Point the preparation command at the actual expert-trace and Countdown source files.
+2. Connect the prepared JSONL artifacts to real training loops.
 3. Add evaluation code around actual model generations.
 4. Extend the one-shot cleaner toward multi-step cleaning and selective memory retention.
