@@ -15,7 +15,8 @@ from learning_to_reset.data import CountdownSample, load_countdown_samples
 from learning_to_reset.paper_sources import write_jsonl_records
 
 
-RecoveryStyle = Literal["walkthrough", "verification", "both"]
+SingleRecoveryStyle = Literal["walkthrough", "verification", "contrastive"]
+RecoveryStyle = Literal["walkthrough", "verification", "contrastive", "both", "all"]
 
 
 def _format_fraction(value: Fraction) -> str:
@@ -185,29 +186,97 @@ def build_verified_recovery_response(
     )
 
 
-def _recovery_styles_for(style: RecoveryStyle) -> Tuple[Literal["walkthrough", "verification"], ...]:
+def build_contrastive_recovery_response(
+    sample: CountdownSample,
+    *,
+    incorrect_expression: str,
+    solution_expression: str,
+) -> str:
+    """Create a retry response that rejects the failed candidate before answering."""
+
+    incorrect_verification = verify_countdown_expression(
+        incorrect_expression,
+        numbers=sample.numbers,
+        target=sample.target,
+    )
+    if not incorrect_verification.is_valid:
+        raise ValueError(
+            f"Contrastive recovery needs a legal failed expression for sample {sample.source_id!r}."
+        )
+    if incorrect_verification.reaches_target:
+        raise ValueError(
+            f"Contrastive recovery failed expression already reaches target for sample {sample.source_id!r}."
+        )
+
+    solution_verification = verify_countdown_expression(
+        solution_expression,
+        numbers=sample.numbers,
+        target=sample.target,
+    )
+    if not solution_verification.is_valid or not solution_verification.reaches_target:
+        raise ValueError(
+            f"Contrastive recovery solution does not reach target for sample {sample.source_id!r}."
+        )
+
+    incorrect_value = _format_fraction(
+        incorrect_verification.value
+        if incorrect_verification.value is not None
+        else Fraction(0)
+    )
+    solution_value = _format_fraction(
+        solution_verification.value
+        if solution_verification.value is not None
+        else Fraction(sample.target)
+    )
+    return (
+        "<think>\n"
+        "After resetting the scratch work, I compare the failed candidate with a verified one.\n"
+        f"Rejected candidate: {incorrect_expression} = {incorrect_value}, not {sample.target}.\n"
+        f"Verified candidate: {solution_expression} = {solution_value}.\n"
+        "The verified candidate matches the target, so I use it as the final answer.\n"
+        "</think>\n"
+        "<answer>\n"
+        f"{solution_expression}\n"
+        "</answer>"
+    )
+
+
+def _recovery_styles_for(style: RecoveryStyle) -> Tuple[SingleRecoveryStyle, ...]:
     if style == "walkthrough":
         return ("walkthrough",)
     if style == "verification":
         return ("verification",)
+    if style == "contrastive":
+        return ("contrastive",)
     if style == "both":
         return ("walkthrough", "verification")
-    raise ValueError("recovery_style must be 'walkthrough', 'verification', or 'both'.")
+    if style == "all":
+        return ("walkthrough", "verification", "contrastive")
+    raise ValueError(
+        "recovery_style must be 'walkthrough', 'verification', 'contrastive', 'both', or 'all'."
+    )
 
 
 def _build_recovery_response_for_style(
     sample: CountdownSample,
     *,
+    incorrect_expression: str,
     solution_expression: str,
-    recovery_style: Literal["walkthrough", "verification"],
+    recovery_style: SingleRecoveryStyle,
 ) -> str:
     if recovery_style == "walkthrough":
         return build_recovery_response(
             sample,
             solution_expression=solution_expression,
         )
-    return build_verified_recovery_response(
+    if recovery_style == "verification":
+        return build_verified_recovery_response(
+            sample,
+            solution_expression=solution_expression,
+        )
+    return build_contrastive_recovery_response(
         sample,
+        incorrect_expression=incorrect_expression,
         solution_expression=solution_expression,
     )
 
@@ -249,7 +318,7 @@ def build_negative_expression(sample: CountdownSample) -> str:
 def build_negative_trace_record(
     sample: CountdownSample,
     *,
-    recovery_style: Literal["walkthrough", "verification"] = "walkthrough",
+    recovery_style: SingleRecoveryStyle = "walkthrough",
 ) -> Dict[str, Any]:
     """Create an unproductive tagged trace that the curator can turn into `<clean>`."""
 
@@ -286,6 +355,7 @@ def build_negative_trace_record(
         ),
         "recovery_response": _build_recovery_response_for_style(
             sample,
+            incorrect_expression=incorrect_expression,
             solution_expression=solution_expression,
             recovery_style=recovery_style,
         ),
@@ -413,7 +483,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--recovery-style",
-        choices=("walkthrough", "verification", "both"),
+        choices=("walkthrough", "verification", "contrastive", "both", "all"),
         default="walkthrough",
         help="Retry response style for synthetic negative traces.",
     )

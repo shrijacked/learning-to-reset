@@ -11,7 +11,7 @@ The repository currently covers three core software primitives:
 - Modified RLOO utilities that propagate the final reward through both segments
 - A synthetic Countdown-aligned fallback trace generator backed by a deterministic solver
 - Multi-solution synthetic supervision and arithmetic walkthrough trace generation
-- Verifier-grounded synthetic recovery responses for arithmetic-consistency supervision
+- Verifier-grounded and contrastive synthetic recovery responses for arithmetic-consistency supervision
 - A bounded multi-clean extension with a reset budget and per-clean penalty
 - Dataset loaders and prompt builders for trace and Countdown-style records
 - Deterministic split and batching helpers for future training/evaluation loops
@@ -26,7 +26,7 @@ The repository currently covers three core software primitives:
 
 The repository now supports the baseline pipeline over prepared artifacts: fetch paper-aligned source files, prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is improving arithmetic grounding and scaling those real-source paths into stronger target-model runs.
 
-The latest local pilot now exercises that path on real fetched Countdown prompts plus expanded Countdown-aligned fallback traces. The best current CPU-only checkpoint is the expanded SFT run: raw one-pass decoding remains `0/8` valid, while reset-aware evaluation reaches `8/8` valid, `1/8` correct, and `clean_rate = 1.0` on the held-out slice. A small reset-aware RLOO pass completed on top of that checkpoint, but it did not improve held-out correctness.
+The latest local pilot now exercises that path on real fetched Countdown prompts plus expanded Countdown-aligned fallback traces. The best current CPU-only checkpoint is the expanded SFT run: raw one-pass decoding remains `0/8` valid, while reset-aware evaluation reaches `8/8` valid, `1/8` correct, and `clean_rate = 1.0` on the held-out slice. A balanced verifier-grounded ablation ties that result, while a small reset-aware RLOO pass completed but did not improve held-out correctness.
 
 ## Project Docs
 
@@ -92,7 +92,7 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.synthetic_countdown_trace
   --countdown tmp/paper-assets/countdown-train.jsonl \
   --output-path tmp/paper-assets/synthetic-countdown-traces.jsonl \
   --solutions-per-sample 4 \
-  --recovery-style both
+  --recovery-style all
 ```
 
 Run SFT on prepared artifacts:
@@ -146,8 +146,8 @@ tests/                     Regression tests for the current behavior
 
 ## Immediate Next Steps
 
-1. Replace the fallback trace source with a stronger paper-native Countdown expert-trace source.
-2. Rebuild the hybrid synthetic trace set with `--recovery-style both` so recovery examples include verifier-grounded checks.
-3. Re-run SFT and reset-aware RLOO after that grounding improvement, using the same held-out hard Countdown slice.
+1. Run the new contrastive recovery trace source through the same SFT/evaluation gate.
+2. Add or acquire a stronger Countdown-native expert-trace source if contrastive traces still do not improve correctness.
+3. Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 4. Scale from local CPU pilots to a larger target-model train/eval run.
 5. Extend the new bounded multi-clean path toward selective retention and recall-aware memory.

@@ -111,6 +111,7 @@ from learning_to_reset.sft_runtime import (
     train_sft,
 )
 from learning_to_reset.synthetic_countdown_traces import (
+    build_contrastive_recovery_response,
     build_negative_expression,
     build_negative_trace_record,
     build_positive_trace_record,
@@ -190,6 +191,7 @@ __all__ = [
     "TrajectoryTerm",
     "batch_prompt_examples",
     "build_countdown_prompt",
+    "build_contrastive_recovery_response",
     "build_initial_prompt",
     "build_retry_prompt",
     "build_demo_report",

@@ -24,7 +24,7 @@ Implemented and verified:
 - a live smoke-verified paper-source flow from fetch -> trace bootstrap -> artifact preparation
 - a deterministic Countdown solver and synthetic Countdown-aligned fallback trace generator
 - multi-solution synthetic Countdown supervision and step-by-step arithmetic walkthrough traces
-- verifier-grounded synthetic recovery responses that explicitly state the checked expression value
+- verifier-grounded and contrastive synthetic recovery responses that explicitly state checked expression values
 - automatic resolution of nested `best-checkpoint` and `final-checkpoint` model outputs
 - a first bounded multi-step cleaning extension with clean-budget and clean-penalty support
 - retry-stage recovery augmentation for fallback SFT preparation
@@ -54,7 +54,7 @@ What works today:
 - the repo can fetch positive reference traces and expand them into a paired reset-aware trace corpus
 - the repo can prepare paper-aligned artifacts from those real source files
 - the repo can synthesize Countdown-aligned fallback traces locally when a stronger trace source is unavailable
-- the synthetic trace generator can emit both walkthrough and verifier-grounded recovery styles for the same solved prompt
+- the synthetic trace generator can emit walkthrough, verifier-grounded, and contrastive recovery styles for the same solved prompt
 - raw one-pass and reset-aware evaluation summaries can be compared with a repeatable CLI utility
 - the target Qwen model can complete local SFT checkpoints and reset-aware RL checkpoints on pilot subsets
 - evaluation can load trainer output roots directly even when the actual model lives inside `best-checkpoint` or `final-checkpoint`
@@ -101,8 +101,8 @@ Interpretation:
 
 ## Remaining Engineering Work
 
-1. Add a stronger Countdown-native expert-trace source or improve solver-backed trace selection so post-clean retries are target-correct more often.
-2. Re-run SFT only after the trace source improves arithmetic grounding beyond the current `1/8` held-out result.
+1. Run the new contrastive recovery trace source through the same SFT and held-out evaluation gate.
+2. Add a stronger Countdown-native expert-trace source if contrastive recovery data still does not improve arithmetic grounding beyond the current `1/8` held-out result.
 3. Re-run reset-aware RLOO only after the SFT checkpoint produces stronger target-correct retries.
 4. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
 5. Run a larger raw-versus-reset-aware comparison on a broader hard Countdown slice.

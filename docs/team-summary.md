@@ -13,6 +13,7 @@
   - multiple synthetic solution variants per prompt
   - step-by-step arithmetic walkthrough traces after reset
   - verifier-grounded recovery traces that state the checked expression value
+  - contrastive recovery traces that reject the failed expression before giving the verified answer
 - Data/prompt preparation is in place:
   - trace and Countdown loaders
   - prompt assembly and split/export tooling
@@ -46,8 +47,8 @@
 
 ## To Do
 
-- Add or build a stronger Countdown-native expert-trace source because the current hybrid source is valid but still weak on arithmetic correctness.
-- Re-run SFT after the trace source improves target-correct post-clean retries.
+- Run the new contrastive recovery trace source through SFT and held-out evaluation.
+- Add or build a stronger Countdown-native expert-trace source if contrastive traces still do not improve arithmetic correctness.
 - Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 - Scale the local CPU pilot into a larger target-model run.
 - Run raw-versus-reset-aware comparison on a larger hard Countdown slice.
@@ -55,9 +56,9 @@
 
 ## Next Plan
 
-1. Improve the Countdown trace source so retries are target-correct more often, not just well-formed.
-2. Re-run SFT on the improved trace set and keep the same held-out comparison gate.
-3. Compare the improved SFT checkpoint against raw generation, the current expanded SFT checkpoint, and the RLOO checkpoint.
+1. Generate the contrastive recovery trace set from the same Countdown source split.
+2. Re-run SFT on that trace set and keep the same held-out comparison gate.
+3. Compare the contrastive SFT checkpoint against raw generation, the current expanded SFT checkpoint, and the RLOO checkpoint.
 4. Run reset-aware RLOO only if the improved SFT checkpoint beats the current `1/8` held-out correctness result.
 5. Continue the extension track with selective retention and recall-aware memory after the one-shot baseline is stronger.
 

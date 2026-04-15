@@ -6,6 +6,7 @@ from learning_to_reset.countdown_solver import solve_countdown
 from learning_to_reset.data import CountdownSample
 from learning_to_reset.countdown_verifier import score_countdown_response
 from learning_to_reset.synthetic_countdown_traces import (
+    build_contrastive_recovery_response,
     build_negative_trace_record,
     build_positive_trace_record,
     build_solution_walkthrough,
@@ -79,6 +80,35 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
         self.assertIn("= 70", response)
         self.assertIn("matches the target 70", response)
 
+    def test_contrastive_recovery_response_rejects_failed_candidate(self) -> None:
+        response = build_contrastive_recovery_response(
+            self.sample,
+            incorrect_expression="9",
+            solution_expression="((9 * 11) - (12 + 17))",
+        )
+
+        verification = score_countdown_response(response, self.sample)
+        self.assertTrue(verification.is_valid)
+        self.assertTrue(verification.reaches_target)
+        self.assertIn("Rejected candidate: 9 = 9, not 70.", response)
+        self.assertIn(
+            "Verified candidate: ((9 * 11) - (12 + 17)) = 70.",
+            response,
+        )
+
+    def test_negative_trace_record_can_emit_contrastive_recovery(self) -> None:
+        record = build_negative_trace_record(
+            self.sample,
+            recovery_style="contrastive",
+        )
+
+        recovery_verification = score_countdown_response(record["recovery_response"], self.sample)
+        self.assertEqual(record["metadata"]["recovery_style"], "contrastive")
+        self.assertTrue(recovery_verification.is_valid)
+        self.assertTrue(recovery_verification.reaches_target)
+        self.assertIn("Rejected candidate:", record["recovery_response"])
+        self.assertIn("Verified candidate:", record["recovery_response"])
+
     def test_build_synthetic_trace_records_returns_paired_records(self) -> None:
         records, skipped = build_synthetic_trace_records([self.sample])
 
@@ -117,6 +147,23 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
         ]
         self.assertTrue(any("Step 1:" in response for response in recovery_responses))
         self.assertTrue(any("Verifier check:" in response for response in recovery_responses))
+
+    def test_build_synthetic_trace_records_can_emit_all_recovery_styles(self) -> None:
+        records, skipped = build_synthetic_trace_records(
+            [self.sample],
+            recovery_style="all",
+        )
+
+        self.assertEqual(skipped, 0)
+        self.assertEqual(len(records), 4)
+        recovery_responses = [
+            record["recovery_response"]
+            for record in records
+            if not record["is_correct"]
+        ]
+        self.assertTrue(any("Step 1:" in response for response in recovery_responses))
+        self.assertTrue(any("Verifier check:" in response for response in recovery_responses))
+        self.assertTrue(any("Rejected candidate:" in response for response in recovery_responses))
 
     def test_generate_synthetic_trace_corpus_writes_jsonl(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
