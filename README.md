@@ -10,6 +10,7 @@ The repository currently covers three core software primitives:
 - A one-shot context manager that handles `y0 -> optional <clean> -> y1`
 - Modified RLOO utilities that propagate the final reward through both segments
 - A synthetic Countdown-aligned fallback trace generator backed by a deterministic solver
+- Multi-solution synthetic supervision and arithmetic walkthrough trace generation
 - A bounded multi-clean extension with a reset budget and per-clean penalty
 - Dataset loaders and prompt builders for trace and Countdown-style records
 - Deterministic split and batching helpers for future training/evaluation loops
@@ -22,7 +23,7 @@ The repository currently covers three core software primitives:
 
 The repository now supports the baseline pipeline over prepared artifacts: prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is wiring the real datasets and model checkpoints into that pipeline and producing the paper-aligned experiment runs.
 
-The latest local pilot now exercises that path on Countdown-aligned fallback traces and real fetched Countdown prompts. The strongest small CPU-only run still scores `0/4` on the held-out slice for target correctness, but it now reliably reaches valid post-clean arithmetic expressions and has produced the first nonzero validation accuracy signal in the reset-aware RL stage.
+The latest local pilot now exercises that path on Countdown-aligned fallback traces and real fetched Countdown prompts. The current small CPU-only baseline still scores `0/4` on the held-out slice for target correctness, but it now shows a stable gap between raw one-pass decoding and reset-aware retries: raw generation remains invalid on the hard slice, while reset-aware evaluation reliably reaches valid post-clean arithmetic expressions with `clean_rate = 1.0`.
 
 ## Project Docs
 
@@ -85,7 +86,8 @@ Generate a Countdown-aligned fallback trace set directly from local Countdown pr
 ```bash
 PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.synthetic_countdown_traces \
   --countdown tmp/paper-assets/countdown-train.jsonl \
-  --output-path tmp/paper-assets/synthetic-countdown-traces.jsonl
+  --output-path tmp/paper-assets/synthetic-countdown-traces.jsonl \
+  --solutions-per-sample 4
 ```
 
 Run SFT on prepared artifacts:
@@ -131,7 +133,7 @@ tests/                     Regression tests for the current behavior
 ## Immediate Next Steps
 
 1. Replace the fallback trace source with a stronger paper-native Countdown expert-trace source.
-2. Strengthen the recovery supervision further so post-clean retries move from valid expressions to target-correct expressions.
+2. Strengthen the recovery supervision further so post-clean retries move from valid-looking expressions to arithmetic-consistent, target-correct expressions.
 3. Scale the pilot from tiny local subsets to a larger paper-style train/eval run.
-4. Re-run the base, SFT, and reset-aware checkpoints on the same held-out hard Countdown slice.
+4. Re-run the base, SFT, and reset-aware checkpoints on the same held-out hard Countdown slice, including raw vs reset-aware comparisons.
 5. Extend the new bounded multi-clean path toward selective retention and recall-aware memory.

@@ -20,6 +20,7 @@ Implemented and verified:
 - a paper-aligned artifact preparation path that keeps external train/eval splits separate
 - a first real local pilot run on fetched source data
 - a deterministic Countdown solver and synthetic Countdown-aligned fallback trace generator
+- multi-solution synthetic Countdown supervision and step-by-step arithmetic walkthrough traces
 - automatic resolution of nested `best-checkpoint` and `final-checkpoint` model outputs
 - a first bounded multi-step cleaning extension with clean-budget and clean-penalty support
 - retry-stage recovery augmentation for fallback SFT preparation
@@ -50,12 +51,13 @@ What works today:
 - the target Qwen model can complete a first local SFT checkpoint and a first local reset-aware RL checkpoint on a pilot subset
 - evaluation can load trainer output roots directly even when the actual model lives inside `best-checkpoint` or `final-checkpoint`
 - fallback SFT preparation can append retry-stage recovery examples and rebalance them explicitly
+- the held-out hard slice can now be scored in both raw one-pass mode and reset-aware retry mode from the same checkpoint
 
 What is not implemented yet:
 
 - a strong paper-native expert-trace source that cleanly provides both productive and unproductive tagged traces for the reset-aware SFT stage
 - a larger paper-style run with enough data and compute to produce nontrivial Countdown accuracy
-- baseline-versus-reset-aware comparison on a properly sized hard Countdown slice
+- a properly scaled baseline-versus-reset-aware comparison on a larger hard Countdown slice
 - extension stages beyond bounded multi-step cleaning, especially selective retention and recall-aware memory
 
 ## Current Pilot Result
@@ -72,22 +74,34 @@ Observed pilot outcome:
 - the reset-aware RL stage on top of that synthetic SFT checkpoint also remained `0/4`
 - a stronger fallback SFT run with repeated retry-recovery supervision reached `valid_rate = 1.0` and `average_score = 0.1` on the held-out slice
 - the corresponding reset-aware RL run reached `validation_accuracy = 1/3` and `validation_average_score = 0.4` on its local validation slice, while the held-out slice stayed at `0/4` correct and `4/4` valid
+- an expanded fallback run with multiple synthetic solution variants kept the same held-out summary, but confirmed a key comparison:
+  - raw one-pass generation stayed `0/4` valid
+  - reset-aware evaluation stayed `4/4` valid with `clean_rate = 1.0`
+- a walkthrough-enriched fallback run lowered local SFT loss further and changed the retry behavior qualitatively:
+  - the model now emits explicit arithmetic steps after `<clean>`
+  - the held-out slice still stays `0/4` correct and `4/4` valid
+  - the current failure mode is arithmetic hallucination, where the narrated steps and target claim look plausible but the final expression still evaluates incorrectly
+- the first walkthrough-based RL retry run exposed an execution constraint:
+  - `max_new_tokens = 64` truncates longer retry walkthroughs and collapses validation validity to `0.0`
+  - rerunning that RL stage with `max_new_tokens = 128` restores fully formed answers, but the held-out slice still remains `0/4` correct and `4/4` valid
 
 Interpretation:
 
 - the source wiring and runtime pipeline now work on real fetched assets
 - the current pilot is still too weak to claim meaningful paper-level performance
-- the main remaining baseline blocker is no longer formatting or reset behavior; it is target-correctness after the clean step, plus larger compute/data
+- the raw-vs-reset-aware gap is now directly measured on the held-out slice: reset logic helps validity, while one-pass generation still fails outright
+- the main remaining baseline blocker is no longer formatting or reset behavior; it is arithmetic grounding and target-correctness after the clean step, plus larger compute/data
 - the first extension module is now implemented separately from the baseline path, so future work can extend beyond one-shot cleaning without destabilizing the paper baseline
 
 ## Remaining Engineering Work
 
 1. Replace the fallback trace slice with a stronger paper-native expert-trace source.
-2. Strengthen the fallback recovery path further so the post-clean retry stage learns target-correct expressions, not just legal ones.
-3. Re-run the SFT stage on a larger paper-aligned split.
-4. Re-run the reset-aware RLOO stage on top of that checkpoint.
-5. Evaluate on hard Countdown examples and compare against the default baseline.
-6. Extend the current multi-clean module toward selective retention and recall-aware memory.
+2. Strengthen the fallback recovery path further so the post-clean retry stage learns arithmetic that is actually consistent with the final expression, not just valid-looking structure.
+3. Expand the paper-aligned Countdown source split beyond the tiny local slice.
+4. Re-run the SFT stage on that larger aligned split.
+5. Re-run the reset-aware RLOO stage on top of that checkpoint with a retry token budget that matches the trace format length.
+6. Evaluate on hard Countdown examples and compare against the default baseline.
+7. Extend the current multi-clean module toward selective retention and recall-aware memory.
 
 ## Remaining Non-Engineering Work
 
@@ -98,6 +112,7 @@ Interpretation:
 ## Recommended Talking Points Right Now
 
 - the technical baseline is no longer just an idea; the core mechanics exist in code and are tested
-- the next meaningful milestone is stronger target-correct recovery after the clean step, ideally from a paper-native or stronger Countdown-aligned trace source
-- the model now reliably reaches legal post-clean expressions on the held-out slice, so the remaining gap is correctness rather than formatting
+- the repo now shows a direct held-out separation between raw one-pass failure and reset-aware valid retries
+- the next meaningful milestone is stronger target-correct recovery after the clean step, ideally from a paper-native or larger Countdown-aligned trace source
+- the model now reliably reaches well-formed post-clean traces on the held-out slice, so the remaining gap is arithmetic correctness rather than formatting
 - the most important future direction remains stronger context management beyond one-shot reset
