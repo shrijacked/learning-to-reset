@@ -7,7 +7,14 @@ from learning_to_reset.context_manager import (
     extract_answer_text,
     manage_single_clean_cycle,
 )
+from learning_to_reset.data import CountdownSample, TraceRecord, load_countdown_samples, load_trace_records
 from learning_to_reset.demo import DemoSnapshot, build_demo_report, build_demo_snapshot
+from learning_to_reset.prompts import (
+    PromptExample,
+    build_countdown_prompt,
+    build_reasoning_prompt,
+    build_sft_training_example,
+)
 from learning_to_reset.rloo import (
     ModifiedRLOOResult,
     TrajectorySample,
@@ -25,21 +32,29 @@ from learning_to_reset.trace_curation import (
 
 __all__ = [
     "CuratedTrace",
+    "CountdownSample",
     "DemoSnapshot",
     "ManagedGeneration",
     "ModifiedRLOOResult",
     "NormalizedTrace",
+    "PromptExample",
+    "TraceRecord",
     "TrajectorySample",
     "TrajectoryTerm",
+    "build_countdown_prompt",
     "build_initial_prompt",
     "build_retry_prompt",
     "build_demo_report",
     "build_demo_snapshot",
+    "build_reasoning_prompt",
+    "build_sft_training_example",
     "compute_leave_one_out_advantages",
     "compute_modified_rloo_terms",
     "compute_total_reward",
     "curate_trace",
     "extract_answer_text",
+    "load_countdown_samples",
+    "load_trace_records",
     "manage_single_clean_cycle",
     "normalize_trace",
 ]
