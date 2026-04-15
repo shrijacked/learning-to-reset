@@ -16,6 +16,9 @@ Implemented and verified:
 - reset-aware RLOO runtime with local metrics, best-checkpoint saving, and CLI entrypoint
 - unit-test coverage for the baseline mechanics
 - a tiny-model smoke run through the reset-aware trainer and evaluator
+- paper-aligned source adapters for the upstream Countdown datasets
+- a paper-aligned artifact preparation path that keeps external train/eval splits separate
+- a first real local pilot run on fetched source data
 - GitHub repository setup and CI for the test suite
 
 ## Working Baseline
@@ -36,21 +39,41 @@ What works today:
 - a reset-aware RLOO trainer can sample `k` trajectories, apply one-shot retry logic, and optimize with the modified loss
 - clean-aware evaluation can retry once after `<clean>` and record score, accuracy, and clean rate
 - training runs emit local metrics and checkpoint outputs for inspection
+- the repo can fetch and flatten the upstream Countdown train/eval datasets into local JSONL source files
+- the repo can prepare paper-aligned artifacts from those real source files
+- the target Qwen model can complete a first local SFT checkpoint and a first local reset-aware RL checkpoint on a pilot subset
 
 What is not implemented yet:
 
-- wiring the preparation command to the real source datasets used by the project
-- the first paper-aligned SFT and RLOO runs on the actual target model
-- baseline-versus-reset-aware comparison on the real hard Countdown split
+- a strong expert-trace source that cleanly provides both productive and unproductive tagged traces for the reset-aware SFT stage
+- a larger paper-style run with enough data and compute to produce nontrivial Countdown accuracy
+- baseline-versus-reset-aware comparison on a properly sized hard Countdown slice
 - extension stages such as multi-step cleaning, selective retention, and recall-aware memory
+
+## Current Pilot Result
+
+The first real local pilot run completed on a tiny fetched subset and a CPU-only setup.
+
+Observed pilot outcome:
+
+- SFT checkpoint trained successfully on 21 train traces and 3 validation traces
+- reset-aware RL checkpoint ran successfully on 9 Countdown train prompts and 3 validation prompts
+- base, SFT, and reset-aware checkpoints all scored `0/4` on the tiny held-out eval slice
+
+Interpretation:
+
+- the source wiring and runtime pipeline now work on real fetched assets
+- the current pilot is still too weak to claim meaningful paper-level performance
+- the next blocker is better trace supervision and a stronger run configuration, not missing plumbing
 
 ## Remaining Engineering Work
 
 1. Point the preparation command at the real expert-trace and Countdown files.
-2. Run the first SFT pipeline around the exported splits and the target model.
-3. Run the reset-aware RLOO stage on top of that SFT checkpoint.
-4. Evaluate on hard Countdown examples and compare against the default baseline.
-5. Start extension work only after the baseline pipeline produces stable outputs.
+2. Replace the provisional positive-trace slice with a stronger expert-trace source.
+3. Re-run the SFT stage on a larger paper-aligned split.
+4. Re-run the reset-aware RLOO stage on top of that checkpoint.
+5. Evaluate on hard Countdown examples and compare against the default baseline.
+6. Start extension work only after the baseline pipeline produces stable outputs.
 
 ## Remaining Non-Engineering Work
 

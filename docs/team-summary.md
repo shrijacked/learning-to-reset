@@ -14,24 +14,27 @@
   - SFT
   - reset-aware RLOO
   - clean-aware evaluation
+- Real-source Countdown adapters now exist:
+  - upstream train/eval fetch and flattening
+  - paper-aligned artifact preparation from separate train/eval files
 - A runnable baseline demo is available through:
   - `PYTHONPATH=src python3 -m learning_to_reset`
 
 ## To Do
 
-- Point the pipeline at the real expert-trace and Countdown files.
-- Run the first SFT checkpoint on the target model.
-- Run the reset-aware RLOO stage on top of that checkpoint.
-- Evaluate baseline vs reset-aware results on hard Countdown examples.
+- Replace the provisional positive-trace source with a stronger expert-trace source.
+- Re-run SFT on a larger paper-aligned split.
+- Re-run the reset-aware RLOO stage on top of that checkpoint.
+- Evaluate baseline vs reset-aware results on a larger hard Countdown slice.
 - Begin extension work only after the baseline run is stable.
 
 ## Next Plan
 
 1. Wire in the real datasets.
-2. Run SFT on curated traces.
-3. Run reset-aware RLOO on the SFT checkpoint.
-4. Compare hard-example performance and clean usage.
-5. Move to multi-step cleaning and selective retention after the baseline is stable.
+2. Strengthen the trace source.
+3. Run SFT on the larger trace set.
+4. Run reset-aware RLOO on the resulting checkpoint.
+5. Compare hard-example performance and clean usage.
 
 ## Non-Engineering Leftovers
 

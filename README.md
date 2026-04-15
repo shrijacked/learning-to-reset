@@ -61,6 +61,21 @@ PYTHONPATH=src python3 -m learning_to_reset.prepare_artifacts \
   --output-dir output/prepared
 ```
 
+Fetch a paper-aligned Countdown subset and prepare real-source artifacts:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.paper_sources \
+  --output-dir tmp/paper-assets \
+  --max-train-samples 12 \
+  --max-eval-samples 4
+
+PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.prepare_paper_artifacts \
+  --traces tmp/paper-assets/reference-positive-traces.jsonl \
+  --countdown-train tmp/paper-assets/countdown-train.jsonl \
+  --countdown-eval tmp/paper-assets/countdown-eval.jsonl \
+  --output-dir tmp/paper-artifacts
+```
+
 Run SFT on prepared artifacts:
 
 ```bash
@@ -103,8 +118,8 @@ tests/                     Regression tests for the current behavior
 
 ## Immediate Next Steps
 
-1. Point the preparation command at the actual expert-trace and Countdown source files.
-2. Run the SFT runtime against the actual model and prepared splits.
-3. Run the reset-aware RLOO runtime on top of the SFT checkpoint and collect the first real metrics.
-4. Evaluate the hard Countdown slice against the default baseline.
+1. Replace the provisional positive-trace slice with a stronger usable expert-trace source that yields both correct and incorrect tagged traces.
+2. Scale the pilot from tiny local subsets to a larger paper-style train/eval run.
+3. Improve local/offline model loading so cached Hugging Face models can be reused without network lookups.
+4. Re-run the base, SFT, and reset-aware checkpoints on the same held-out hard Countdown slice.
 5. Extend the one-shot cleaner toward multi-step cleaning and selective memory retention.
