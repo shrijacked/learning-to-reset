@@ -7,6 +7,8 @@ Implemented and verified:
 - trace normalization and SFT curation for `<clean>`-aware examples
 - one-shot context reset manager for `y0 -> optional <clean> -> y1`
 - reset-aware RLOO reward and advantage utilities
+- JSON/JSONL dataset loaders for trace and Countdown-style records
+- prompt builders for SFT and reset-aware evaluation inputs
 - unit-test coverage for the baseline mechanics
 - GitHub repository setup and CI for the test suite
 
@@ -19,20 +21,22 @@ What works today:
 - curated expert traces can be transformed into reset-aware training examples
 - a reset interaction can be simulated deterministically
 - reward propagation for reset-aware training can be inspected and tested
+- trace/countdown records can be loaded into structured dataclasses
+- reasoning prompts and SFT examples can be assembled from those records
 
 What is not implemented yet:
 
-- expert-trace dataset ingestion from the full source files
-- Countdown dataset adapters and evaluation harness
-- prompt assembly for training and evaluation runs
+- wiring the loaders to the real source datasets used by the project
+- countdown evaluation harness around actual model generations
+- batch construction and trainer integration
 - full SFT training loop
 - full RLOO training loop
 - experiment tracking for baseline versus reset-aware runs
 
 ## Remaining Engineering Work
 
-1. Add expert-trace and Countdown dataset loaders.
-2. Connect the existing mechanics to prompt assembly and batching code.
+1. Point the new loaders at the real expert-trace and Countdown files.
+2. Build prompt batching around the structured records.
 3. Build the first SFT pipeline around the curated traces.
 4. Add the reset-aware RLOO training loop on top of the SFT checkpoint.
 5. Run evaluation on hard Countdown examples and compare against the baseline.

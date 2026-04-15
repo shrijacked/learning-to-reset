@@ -9,8 +9,9 @@ The repository currently covers three core software primitives:
 - SFT trace curation that teaches the model when to emit `<clean>`
 - A one-shot context manager that handles `y0 -> optional <clean> -> y1`
 - Modified RLOO utilities that propagate the final reward through both segments
+- Dataset loaders and prompt builders for trace and Countdown-style records
 
-This is an initial research scaffold, not a full training pipeline yet. The next major milestone is integrating expert traces, Countdown data, and model training/evaluation loops.
+This is an initial research scaffold, not a full training pipeline yet. The next major milestone is wiring actual datasets and prompt batches into model training and evaluation loops.
 
 ## Project Docs
 
@@ -49,7 +50,7 @@ tests/                     Regression tests for the current behavior
 
 ## Immediate Next Steps
 
-1. Integrate the expert trace format used for SFT.
-2. Add dataset adapters for Countdown and leaderboard-style evaluation.
-3. Connect the context manager and modified RLOO math to a training loop.
+1. Point the loaders at the actual expert-trace and Countdown source files.
+2. Build prompt batching around the new data/prompt layer.
+3. Connect the context manager and modified RLOO math to real training loops.
 4. Extend the one-shot cleaner toward multi-step cleaning and selective memory retention.
