@@ -8,7 +8,7 @@ This repository currently implements the baseline mechanics for a reset-aware re
 2. let the model emit a special `<clean>` token when its reasoning path becomes unproductive
 3. treat the final interaction outcome as the reward signal, whether the answer comes from the first try or from a retry after reset
 
-The repository now includes a local baseline runtime over prepared artifacts. In practice that means the repo can prepare data, run SFT, run a reset-aware RLOO loop, and evaluate with the one-shot clean retry path. What is still missing is the first real run on the target datasets and model checkpoints.
+The repository now includes a local baseline runtime over prepared artifacts. In practice that means the repo can prepare data, run SFT, run a reset-aware RLOO loop, and evaluate with the one-shot clean retry path. The first local target-model pilots have completed; the strongest current signal is that reset-aware evaluation makes post-clean answers well-formed, while target-correct arithmetic remains the main blocker.
 
 ## Repo Map
 
@@ -34,6 +34,7 @@ The repository now includes a local baseline runtime over prepared artifacts. In
   - runs supervised fine-tuning on prepared artifacts
 - `src/learning_to_reset/eval_runtime.py`
   - runs Countdown evaluation, defaulting to clean-aware retry behavior
+  - records the verifier-computed expression value for debugging wrong-target answers
 - `src/learning_to_reset/rloo_runtime.py`
   - runs reset-aware rollouts, computes policy loss, writes metrics, and saves checkpoints
 - `src/learning_to_reset/demo.py`

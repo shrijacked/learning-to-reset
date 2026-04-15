@@ -20,10 +20,11 @@ The repository currently covers three core software primitives:
 - Clean-aware reward and trajectory assembly for Countdown rollouts
 - Reset-aware RLOO runtime with local metrics and checkpointing
 - Clean-aware evaluation that retries once after `<clean>` by default
+- Per-example evaluation diagnostics that record the verifier-computed expression value
 
-The repository now supports the baseline pipeline over prepared artifacts: fetch paper-aligned source files, prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is scaling those real-source paths into stronger paper-aligned experiments and target-model runs.
+The repository now supports the baseline pipeline over prepared artifacts: fetch paper-aligned source files, prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is improving arithmetic grounding and scaling those real-source paths into stronger target-model runs.
 
-The latest local pilot now exercises that path on Countdown-aligned fallback traces and real fetched Countdown prompts. The current small CPU-only baseline still scores `0/4` on the held-out slice for target correctness, but it now shows a stable gap between raw one-pass decoding and reset-aware retries: raw generation remains invalid on the hard slice, while reset-aware evaluation reliably reaches valid post-clean arithmetic expressions with `clean_rate = 1.0`.
+The latest local pilot now exercises that path on real fetched Countdown prompts plus expanded Countdown-aligned fallback traces. The best current CPU-only checkpoint is the expanded SFT run: raw one-pass decoding remains `0/8` valid, while reset-aware evaluation reaches `8/8` valid, `1/8` correct, and `clean_rate = 1.0` on the held-out slice. A small reset-aware RLOO pass completed on top of that checkpoint, but it did not improve held-out correctness.
 
 ## Project Docs
 
@@ -135,6 +136,6 @@ tests/                     Regression tests for the current behavior
 
 1. Replace the fallback trace source with a stronger paper-native Countdown expert-trace source.
 2. Strengthen the recovery supervision further so post-clean retries move from valid-looking expressions to arithmetic-consistent, target-correct expressions.
-3. Scale the pilot from tiny local subsets to a larger paper-style train/eval run.
-4. Re-run the base, SFT, and reset-aware checkpoints on the same held-out hard Countdown slice, including raw vs reset-aware comparisons.
+3. Re-run SFT and reset-aware RLOO after that grounding improvement, using the same held-out hard Countdown slice.
+4. Scale from local CPU pilots to a larger target-model train/eval run.
 5. Extend the new bounded multi-clean path toward selective retention and recall-aware memory.

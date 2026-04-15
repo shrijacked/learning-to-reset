@@ -61,7 +61,8 @@ flowchart LR
 - No external memory writes or reads
 - Final reward assigned to the end-to-end interaction
 - Prepared-artifact SFT, reset-aware RLOO, and clean-aware evaluation runtimes exist locally
-- Remaining baseline work is real dataset/model execution and experiment comparison
+- Real-source/local-hybrid SFT, reset-aware RLOO, and raw-vs-reset-aware comparison have run on a CPU pilot
+- Remaining baseline work is stronger arithmetic grounding, larger target-model execution, and broader experiment comparison
 
 ### Extension
 

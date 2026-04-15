@@ -19,6 +19,7 @@
   - SFT
   - reset-aware RLOO
   - clean-aware evaluation
+- Evaluation records now include the verifier-computed expression value, which makes arithmetic failures easier to diagnose.
 - Real-source Countdown adapters now exist:
   - upstream train/eval fetch and flattening
   - reference trace fetch plus paired trace bootstrap
@@ -31,32 +32,35 @@
 - First extension work is already in code:
   - bounded multi-step cleaning
   - per-clean penalty support
+- The latest expanded local run completed:
+  - expanded SFT reached `8/8` valid and `1/8` correct on the held-out reset-aware slice
+  - raw one-pass decoding stayed `0/8` valid
+  - a small RLOO pass completed but did not improve held-out correctness
 - A runnable baseline demo is available through:
   - `PYTHONPATH=src python3 -m learning_to_reset`
 
 ## To Do
 
-- Scale the fetched reference-trace source beyond the tiny smoke slice and decide whether it needs a stronger Countdown-native supplement.
 - Add better recovery supervision so clean-triggered retries become arithmetic-consistent and target-correct, not just valid-looking.
-- Expand the local Countdown source split beyond the tiny pilot slice.
-- Re-run SFT on the larger paper-aligned split.
-- Re-run the reset-aware RLOO stage on top of that checkpoint with the right retry token budget.
-- Evaluate baseline vs reset-aware results on a larger hard Countdown slice.
+- Add or build a stronger Countdown-native expert-trace source if the current hybrid trace source remains too weak.
+- Re-run SFT after the arithmetic-grounding improvement.
+- Re-run reset-aware RLOO after SFT produces stronger target-correct retries.
+- Scale the local CPU pilot into a larger target-model run.
 - Extend the multi-clean branch toward selective retention and recall-aware memory.
 
 ## Next Plan
 
-1. Strengthen the trace source and expand the Countdown slice.
-2. Push recovery quality from valid-looking retries toward arithmetic-consistent, correct answers.
-3. Run SFT on the larger aligned trace set.
-4. Run reset-aware RLOO on the resulting checkpoint with a retry budget that fits the trace format.
-5. Compare hard-example performance in raw one-pass mode versus reset-aware mode.
+1. Push recovery quality from valid-looking retries toward arithmetic-consistent, correct answers.
+2. Add stronger Countdown-native or verifier-grounded recovery traces.
+3. Re-run SFT on the improved aligned trace set.
+4. Run reset-aware RLOO only after the SFT checkpoint improves target-correct retries.
+5. Keep comparing raw one-pass mode versus reset-aware mode on the same held-out slice.
 
 ## Latest Signal
 
-- Raw one-pass generation is still `0/4` valid on the held-out hard slice.
-- Reset-aware evaluation is consistently `4/4` valid with `clean_rate = 1.0` on that same slice.
-- The newest walkthrough traces improved the qualitative retry behavior, but the held-out slice is still `0/4` correct.
+- Raw one-pass generation is still `0/8` valid on the held-out hard slice.
+- The best expanded SFT checkpoint is `8/8` valid, `1/8` correct, with `clean_rate = 1.0` under reset-aware evaluation.
+- The small RLOO pass is `7/8` valid and `1/8` correct on the same held-out slice, so it does not beat SFT yet.
 - Current blocker: arithmetic grounding on unseen Countdown prompts, not reset formatting.
 
 ## Non-Engineering Leftovers
