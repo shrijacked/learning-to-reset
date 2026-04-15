@@ -12,6 +12,7 @@
   - synthetic positive/negative trace generation from local Countdown prompts
   - multiple synthetic solution variants per prompt
   - step-by-step arithmetic walkthrough traces after reset
+  - verifier-grounded recovery traces that state the checked expression value
 - Data/prompt preparation is in place:
   - trace and Countdown loaders
   - prompt assembly and split/export tooling
@@ -41,7 +42,7 @@
 
 ## To Do
 
-- Add better recovery supervision so clean-triggered retries become arithmetic-consistent and target-correct, not just valid-looking.
+- Regenerate the hybrid synthetic traces with verifier-grounded recovery style enabled.
 - Add or build a stronger Countdown-native expert-trace source if the current hybrid trace source remains too weak.
 - Re-run SFT after the arithmetic-grounding improvement.
 - Re-run reset-aware RLOO after SFT produces stronger target-correct retries.
@@ -50,9 +51,9 @@
 
 ## Next Plan
 
-1. Push recovery quality from valid-looking retries toward arithmetic-consistent, correct answers.
-2. Add stronger Countdown-native or verifier-grounded recovery traces.
-3. Re-run SFT on the improved aligned trace set.
+1. Rebuild the expanded hybrid trace set with both walkthrough and verifier-grounded recovery examples.
+2. Re-run SFT on the improved aligned trace set.
+3. Add a stronger Countdown-native trace source if the verifier-grounded synthetic path is still too weak.
 4. Run reset-aware RLOO only after the SFT checkpoint improves target-correct retries.
 5. Keep comparing raw one-pass mode versus reset-aware mode on the same held-out slice.
 

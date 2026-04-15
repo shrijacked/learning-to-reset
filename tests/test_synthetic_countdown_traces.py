@@ -10,6 +10,7 @@ from learning_to_reset.synthetic_countdown_traces import (
     build_positive_trace_record,
     build_solution_walkthrough,
     build_synthetic_trace_records,
+    build_verified_recovery_response,
     generate_synthetic_trace_corpus,
 )
 
@@ -65,6 +66,19 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
         self.assertIn("Compute (12 + 17) = 29.", walkthrough)
         self.assertIn("Compute ((9 * 11) - (12 + 17)) = 70.", walkthrough)
 
+    def test_verified_recovery_response_states_checked_expression_value(self) -> None:
+        response = build_verified_recovery_response(
+            self.sample,
+            solution_expression="((9 * 11) - (12 + 17))",
+        )
+
+        verification = score_countdown_response(response, self.sample)
+        self.assertTrue(verification.is_valid)
+        self.assertTrue(verification.reaches_target)
+        self.assertIn("Verifier check:", response)
+        self.assertIn("= 70", response)
+        self.assertIn("matches the target 70", response)
+
     def test_build_synthetic_trace_records_returns_paired_records(self) -> None:
         records, skipped = build_synthetic_trace_records([self.sample])
 
@@ -88,6 +102,22 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
             2,
         )
 
+    def test_build_synthetic_trace_records_can_emit_both_recovery_styles(self) -> None:
+        records, skipped = build_synthetic_trace_records(
+            [self.sample],
+            recovery_style="both",
+        )
+
+        self.assertEqual(skipped, 0)
+        self.assertEqual(len(records), 3)
+        recovery_responses = [
+            record["recovery_response"]
+            for record in records
+            if not record["is_correct"]
+        ]
+        self.assertTrue(any("Step 1:" in response for response in recovery_responses))
+        self.assertTrue(any("Verifier check:" in response for response in recovery_responses))
+
     def test_generate_synthetic_trace_corpus_writes_jsonl(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             countdown_path = Path(tmp_dir) / "countdown.jsonl"
@@ -104,11 +134,13 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
                 countdown_path=countdown_path,
                 output_path=output_path,
                 solutions_per_sample=2,
+                recovery_style="both",
             )
             lines = output_path.read_text(encoding="utf-8").splitlines()
 
-        self.assertEqual(summary["records_written"], 4)
-        self.assertEqual(len(lines), 4)
+        self.assertEqual(summary["records_written"], 6)
+        self.assertEqual(summary["recovery_style"], "both")
+        self.assertEqual(len(lines), 6)
 
 
 if __name__ == "__main__":

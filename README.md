@@ -11,6 +11,7 @@ The repository currently covers three core software primitives:
 - Modified RLOO utilities that propagate the final reward through both segments
 - A synthetic Countdown-aligned fallback trace generator backed by a deterministic solver
 - Multi-solution synthetic supervision and arithmetic walkthrough trace generation
+- Verifier-grounded synthetic recovery responses for arithmetic-consistency supervision
 - A bounded multi-clean extension with a reset budget and per-clean penalty
 - Dataset loaders and prompt builders for trace and Countdown-style records
 - Deterministic split and batching helpers for future training/evaluation loops
@@ -89,7 +90,8 @@ Generate a Countdown-aligned fallback trace set directly from local Countdown pr
 PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.synthetic_countdown_traces \
   --countdown tmp/paper-assets/countdown-train.jsonl \
   --output-path tmp/paper-assets/synthetic-countdown-traces.jsonl \
-  --solutions-per-sample 4
+  --solutions-per-sample 4 \
+  --recovery-style both
 ```
 
 Run SFT on prepared artifacts:
@@ -135,7 +137,7 @@ tests/                     Regression tests for the current behavior
 ## Immediate Next Steps
 
 1. Replace the fallback trace source with a stronger paper-native Countdown expert-trace source.
-2. Strengthen the recovery supervision further so post-clean retries move from valid-looking expressions to arithmetic-consistent, target-correct expressions.
+2. Rebuild the hybrid synthetic trace set with `--recovery-style both` so recovery examples include verifier-grounded checks.
 3. Re-run SFT and reset-aware RLOO after that grounding improvement, using the same held-out hard Countdown slice.
 4. Scale from local CPU pilots to a larger target-model train/eval run.
 5. Extend the new bounded multi-clean path toward selective retention and recall-aware memory.

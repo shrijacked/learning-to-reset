@@ -24,6 +24,7 @@ Implemented and verified:
 - a live smoke-verified paper-source flow from fetch -> trace bootstrap -> artifact preparation
 - a deterministic Countdown solver and synthetic Countdown-aligned fallback trace generator
 - multi-solution synthetic Countdown supervision and step-by-step arithmetic walkthrough traces
+- verifier-grounded synthetic recovery responses that explicitly state the checked expression value
 - automatic resolution of nested `best-checkpoint` and `final-checkpoint` model outputs
 - a first bounded multi-step cleaning extension with clean-budget and clean-penalty support
 - retry-stage recovery augmentation for fallback SFT preparation
@@ -53,6 +54,7 @@ What works today:
 - the repo can fetch positive reference traces and expand them into a paired reset-aware trace corpus
 - the repo can prepare paper-aligned artifacts from those real source files
 - the repo can synthesize Countdown-aligned fallback traces locally when a stronger trace source is unavailable
+- the synthetic trace generator can emit both walkthrough and verifier-grounded recovery styles for the same solved prompt
 - the target Qwen model can complete local SFT checkpoints and reset-aware RL checkpoints on pilot subsets
 - evaluation can load trainer output roots directly even when the actual model lives inside `best-checkpoint` or `final-checkpoint`
 - fallback SFT preparation can append retry-stage recovery examples and rebalance them explicitly
@@ -92,9 +94,9 @@ Interpretation:
 
 ## Remaining Engineering Work
 
-1. Strengthen the recovery path so the post-clean retry stage learns arithmetic that is actually consistent with the final expression, not just valid-looking structure.
-2. Add a stronger Countdown-native expert-trace source or verifier-grounded recovery data to reduce arithmetic hallucination.
-3. Re-run the SFT stage on the improved aligned split and preserve the same held-out test comparison.
+1. Regenerate the expanded hybrid trace set with verifier-grounded recovery responses enabled.
+2. Re-run the SFT stage on the improved aligned split and preserve the same held-out test comparison.
+3. Add a stronger Countdown-native expert-trace source if verifier-grounded synthetic recovery data is still too weak.
 4. Re-run reset-aware RLOO only after the SFT checkpoint produces stronger target-correct retries.
 5. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
 6. Extend the current multi-clean module toward selective retention and recall-aware memory.

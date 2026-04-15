@@ -7,12 +7,15 @@ import ast
 import json
 from fractions import Fraction
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Literal, Optional, Sequence, Tuple
 
 from learning_to_reset.countdown_solver import solve_countdown, solve_countdown_variants
 from learning_to_reset.countdown_verifier import verify_countdown_expression
 from learning_to_reset.data import CountdownSample, load_countdown_samples
 from learning_to_reset.paper_sources import write_jsonl_records
+
+
+RecoveryStyle = Literal["walkthrough", "verification", "both"]
 
 
 def _format_fraction(value: Fraction) -> str:
@@ -151,6 +154,64 @@ def build_recovery_response(
     )
 
 
+def build_verified_recovery_response(
+    sample: CountdownSample,
+    *,
+    solution_expression: str,
+) -> str:
+    """Create a concise retry response that explicitly checks the final expression."""
+
+    verification = verify_countdown_expression(
+        solution_expression,
+        numbers=sample.numbers,
+        target=sample.target,
+    )
+    if not verification.is_valid or not verification.reaches_target:
+        raise ValueError(
+            f"Recovery expression does not reach target for sample {sample.source_id!r}."
+        )
+
+    value = _format_fraction(verification.value or Fraction(sample.target))
+    return (
+        "<think>\n"
+        "After resetting the scratch work, I verify the candidate before answering.\n"
+        f"Candidate expression: {solution_expression}.\n"
+        f"Verifier check: {solution_expression} = {value}.\n"
+        f"The verifier value matches the target {sample.target}, so this expression is safe.\n"
+        "</think>\n"
+        "<answer>\n"
+        f"{solution_expression}\n"
+        "</answer>"
+    )
+
+
+def _recovery_styles_for(style: RecoveryStyle) -> Tuple[Literal["walkthrough", "verification"], ...]:
+    if style == "walkthrough":
+        return ("walkthrough",)
+    if style == "verification":
+        return ("verification",)
+    if style == "both":
+        return ("walkthrough", "verification")
+    raise ValueError("recovery_style must be 'walkthrough', 'verification', or 'both'.")
+
+
+def _build_recovery_response_for_style(
+    sample: CountdownSample,
+    *,
+    solution_expression: str,
+    recovery_style: Literal["walkthrough", "verification"],
+) -> str:
+    if recovery_style == "walkthrough":
+        return build_recovery_response(
+            sample,
+            solution_expression=solution_expression,
+        )
+    return build_verified_recovery_response(
+        sample,
+        solution_expression=solution_expression,
+    )
+
+
 def build_negative_expression(sample: CountdownSample) -> str:
     """Pick a simple legal expression that stays off target for reset supervision."""
 
@@ -185,7 +246,11 @@ def build_negative_expression(sample: CountdownSample) -> str:
     )
 
 
-def build_negative_trace_record(sample: CountdownSample) -> Dict[str, Any]:
+def build_negative_trace_record(
+    sample: CountdownSample,
+    *,
+    recovery_style: Literal["walkthrough", "verification"] = "walkthrough",
+) -> Dict[str, Any]:
     """Create an unproductive tagged trace that the curator can turn into `<clean>`."""
 
     incorrect_expression = build_negative_expression(sample)
@@ -199,8 +264,13 @@ def build_negative_trace_record(sample: CountdownSample) -> Dict[str, Any]:
         raise ValueError(
             f"Could not build a recovery response for sample {sample.source_id!r}."
         )
+    source_suffix = (
+        "synthetic-negative"
+        if recovery_style == "walkthrough"
+        else f"synthetic-negative-{recovery_style}"
+    )
     return {
-        "source_id": f"{sample.source_id or 'countdown'}:synthetic-negative",
+        "source_id": f"{sample.source_id or 'countdown'}:{source_suffix}",
         "problem": sample.question,
         "raw_trace": (
             "<think>\n"
@@ -214,13 +284,15 @@ def build_negative_trace_record(sample: CountdownSample) -> Dict[str, Any]:
             f"{incorrect_expression}\n"
             "</answer>"
         ),
-        "recovery_response": build_recovery_response(
+        "recovery_response": _build_recovery_response_for_style(
             sample,
             solution_expression=solution_expression,
+            recovery_style=recovery_style,
         ),
         "is_correct": False,
         "metadata": {
             "source": "synthetic_countdown_solver",
+            "recovery_style": recovery_style,
             "numbers": list(sample.numbers),
             "target": sample.target,
             "incorrect_expression": incorrect_expression,
@@ -234,11 +306,13 @@ def build_synthetic_trace_records(
     *,
     include_negative: bool = True,
     solutions_per_sample: int = 1,
+    recovery_style: RecoveryStyle = "walkthrough",
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Build a paired synthetic trace corpus from Countdown samples."""
 
     if solutions_per_sample <= 0:
         raise ValueError("solutions_per_sample must be positive.")
+    recovery_styles = _recovery_styles_for(recovery_style)
 
     records: List[Dict[str, Any]] = []
     skipped = 0
@@ -263,18 +337,20 @@ def build_synthetic_trace_records(
                 )
             )
             if include_negative:
-                records.append(
-                    build_negative_trace_record(
-                        CountdownSample(
-                            numbers=sample.numbers,
-                            target=sample.target,
-                            question=sample.question,
-                            source_id=sample.source_id,
-                            solution=solution_expression,
-                            metadata=dict(sample.metadata),
+                for single_recovery_style in recovery_styles:
+                    records.append(
+                        build_negative_trace_record(
+                            CountdownSample(
+                                numbers=sample.numbers,
+                                target=sample.target,
+                                question=sample.question,
+                                source_id=sample.source_id,
+                                solution=solution_expression,
+                                metadata=dict(sample.metadata),
+                            ),
+                            recovery_style=single_recovery_style,
                         )
                     )
-                )
     return records, skipped
 
 
@@ -285,6 +361,7 @@ def generate_synthetic_trace_corpus(
     max_samples: int | None = None,
     include_negative: bool = True,
     solutions_per_sample: int = 1,
+    recovery_style: RecoveryStyle = "walkthrough",
 ) -> Dict[str, Any]:
     """Write a synthetic Countdown-aligned trace corpus to JSONL."""
 
@@ -296,6 +373,7 @@ def generate_synthetic_trace_corpus(
         samples,
         include_negative=include_negative,
         solutions_per_sample=solutions_per_sample,
+        recovery_style=recovery_style,
     )
     write_jsonl_records(records, output_path)
 
@@ -305,6 +383,7 @@ def generate_synthetic_trace_corpus(
         "skipped_unsolved": skipped,
         "include_negative": include_negative,
         "solutions_per_sample": solutions_per_sample,
+        "recovery_style": recovery_style,
         "output_path": str(output_path),
     }
     Path(output_path).with_suffix(".summary.json").write_text(
@@ -332,6 +411,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=1,
         help="Maximum number of distinct solved expressions to emit per Countdown sample.",
     )
+    parser.add_argument(
+        "--recovery-style",
+        choices=("walkthrough", "verification", "both"),
+        default="walkthrough",
+        help="Retry response style for synthetic negative traces.",
+    )
     return parser
 
 
@@ -343,6 +428,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         max_samples=args.max_samples,
         include_negative=not args.positive_only,
         solutions_per_sample=args.solutions_per_sample,
+        recovery_style=args.recovery_style,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=True))
     return 0
