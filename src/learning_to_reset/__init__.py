@@ -7,6 +7,12 @@ from learning_to_reset.context_manager import (
     extract_answer_text,
     manage_single_clean_cycle,
 )
+from learning_to_reset.countdown_verifier import (
+    VerificationResult,
+    extract_answer_expression,
+    score_countdown_response,
+    verify_countdown_expression,
+)
 from learning_to_reset.data import CountdownSample, TraceRecord, load_countdown_samples, load_trace_records
 from learning_to_reset.dataset_prep import (
     export_prepared_datasets,
@@ -50,6 +56,7 @@ __all__ = [
     "CountdownSample",
     "DatasetSplit",
     "DemoSnapshot",
+    "VerificationResult",
     "export_prepared_datasets",
     "ManagedGeneration",
     "ModifiedRLOOResult",
@@ -71,6 +78,7 @@ __all__ = [
     "compute_modified_rloo_terms",
     "compute_total_reward",
     "curate_trace",
+    "extract_answer_expression",
     "extract_answer_text",
     "load_countdown_samples",
     "load_trace_records",
@@ -80,7 +88,9 @@ __all__ = [
     "prepare_countdown_split",
     "prepare_sft_examples",
     "prepare_trace_split",
+    "score_countdown_response",
     "serialize_prompt_example",
     "split_sequence",
+    "verify_countdown_expression",
     "write_prompt_examples_jsonl",
 ]
