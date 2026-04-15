@@ -22,7 +22,7 @@ The repository currently covers three core software primitives:
 
 The repository now supports the baseline pipeline over prepared artifacts: prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is wiring the real datasets and model checkpoints into that pipeline and producing the paper-aligned experiment runs.
 
-The latest local pilot now exercises that path on Countdown-aligned fallback traces and real fetched Countdown prompts. The current small CPU-only run still scores `0/4` on the held-out slice, but it now exposes a more specific failure mode: the synthetic SFT checkpoint learns to emit `<clean>` reliably and still needs stronger post-clean recovery supervision to produce valid final answers.
+The latest local pilot now exercises that path on Countdown-aligned fallback traces and real fetched Countdown prompts. The strongest small CPU-only run still scores `0/4` on the held-out slice for target correctness, but it now reliably reaches valid post-clean arithmetic expressions and has produced the first nonzero validation accuracy signal in the reset-aware RL stage.
 
 ## Project Docs
 
@@ -131,7 +131,7 @@ tests/                     Regression tests for the current behavior
 ## Immediate Next Steps
 
 1. Replace the fallback trace source with a stronger paper-native Countdown expert-trace source.
-2. Add recovery-heavy supervision so clean-triggered retries learn to end in `<answer>` instead of repeated `<clean>`.
+2. Strengthen the recovery supervision further so post-clean retries move from valid expressions to target-correct expressions.
 3. Scale the pilot from tiny local subsets to a larger paper-style train/eval run.
 4. Re-run the base, SFT, and reset-aware checkpoints on the same held-out hard Countdown slice.
 5. Extend the new bounded multi-clean path toward selective retention and recall-aware memory.

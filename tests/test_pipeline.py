@@ -57,6 +57,30 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("<answer>", examples[1].response)
         self.assertEqual(examples[1].metadata["stage"], "retry-recovery")
 
+    def test_prepare_sft_examples_can_repeat_retry_recovery_examples(self) -> None:
+        records = (
+            TraceRecord(
+                source_id="trace-1",
+                problem="Make 10 from 7, 2, 1",
+                raw_trace="<think>Wrong turn.</think><answer>9</answer>",
+                is_correct=False,
+                metadata={
+                    "recovery_response": (
+                        "<think>Fresh start.</think><answer>(7 + 2) + 1</answer>"
+                    )
+                },
+            ),
+        )
+
+        examples = prepare_sft_examples(
+            records,
+            include_recovery_examples=True,
+            recovery_repeat=3,
+        )
+
+        self.assertEqual(len(examples), 4)
+        self.assertEqual(sum(int(example.metadata.get("stage") == "retry-recovery") for example in examples), 3)
+
     def test_prepare_countdown_examples_carries_target_metadata(self) -> None:
         samples = (
             CountdownSample(

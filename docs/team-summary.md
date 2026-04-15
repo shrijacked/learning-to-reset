@@ -21,6 +21,9 @@
   - upstream train/eval fetch and flattening
   - paper-aligned artifact preparation from separate train/eval files
 - Trainer outputs can now be evaluated directly from the run root because nested checkpoints resolve automatically.
+- Fallback SFT prep can now:
+  - append retry-stage recovery examples
+  - rebalance those recovery examples with a repeat factor
 - First extension work is already in code:
   - bounded multi-step cleaning
   - per-clean penalty support
@@ -30,7 +33,7 @@
 ## To Do
 
 - Replace the fallback trace source with a stronger paper-native expert-trace source.
-- Add better recovery supervision so clean-triggered retries end in valid answers.
+- Add better recovery supervision so clean-triggered retries become target-correct, not just valid.
 - Re-run SFT on a larger paper-aligned split.
 - Re-run the reset-aware RLOO stage on top of that checkpoint.
 - Evaluate baseline vs reset-aware results on a larger hard Countdown slice.
@@ -39,10 +42,10 @@
 ## Next Plan
 
 1. Strengthen the trace source.
-2. Add retry-recovery training signal.
+2. Push recovery quality from valid answers toward correct answers.
 3. Run SFT on the larger aligned trace set.
 4. Run reset-aware RLOO on the resulting checkpoint.
-5. Compare hard-example performance, clean usage, and recovery quality.
+5. Compare hard-example performance, clean usage, validity, and correctness.
 
 ## Non-Engineering Leftovers
 

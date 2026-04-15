@@ -146,11 +146,12 @@ class PaperDatasetPrepTests(unittest.TestCase):
                 countdown_val_ratio=0.0,
                 allow_clean=True,
                 include_recovery_examples=True,
+                recovery_repeat=2,
             )
             sft_train_lines = (output_dir / "sft-train.jsonl").read_text(encoding="utf-8").splitlines()
 
-        self.assertEqual(manifest["sft"]["train"], 2)
-        self.assertEqual(len(sft_train_lines), 2)
+        self.assertEqual(manifest["sft"]["train"], 3)
+        self.assertEqual(len(sft_train_lines), 3)
         self.assertIn('"stage": "retry-recovery"', sft_train_lines[1])
 
 

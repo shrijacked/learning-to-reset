@@ -60,8 +60,15 @@ def split_sequence(
     )
 
 
-def prepare_retry_recovery_examples(records: Sequence[TraceRecord]) -> Tuple[PromptExample, ...]:
+def prepare_retry_recovery_examples(
+    records: Sequence[TraceRecord],
+    *,
+    repeat: int = 1,
+) -> Tuple[PromptExample, ...]:
     """Build retry-stage recovery examples for records that carry explicit recovery targets."""
+
+    if repeat <= 0:
+        raise ValueError("repeat must be positive.")
 
     examples = []
     for record in records:
@@ -69,18 +76,19 @@ def prepare_retry_recovery_examples(records: Sequence[TraceRecord]) -> Tuple[Pro
         if record.is_correct or not recovery_response:
             continue
 
-        examples.append(
-            PromptExample(
-                prompt=build_reasoning_prompt(record.problem, allow_clean=False),
-                response=str(recovery_response).strip(),
-                metadata={
-                    "source_id": record.source_id,
-                    "is_correct": True,
-                    "uses_clean": False,
-                    "stage": "retry-recovery",
-                },
+        for _ in range(repeat):
+            examples.append(
+                PromptExample(
+                    prompt=build_reasoning_prompt(record.problem, allow_clean=False),
+                    response=str(recovery_response).strip(),
+                    metadata={
+                        "source_id": record.source_id,
+                        "is_correct": True,
+                        "uses_clean": False,
+                        "stage": "retry-recovery",
+                    },
+                )
             )
-        )
     return tuple(examples)
 
 
@@ -88,12 +96,18 @@ def prepare_sft_examples(
     records: Sequence[TraceRecord],
     *,
     include_recovery_examples: bool = False,
+    recovery_repeat: int = 1,
 ) -> Tuple[PromptExample, ...]:
     """Convert trace records into prompt/response examples for SFT."""
 
     examples = [build_sft_training_example(record) for record in records]
     if include_recovery_examples:
-        examples.extend(prepare_retry_recovery_examples(records))
+        examples.extend(
+            prepare_retry_recovery_examples(
+                records,
+                repeat=recovery_repeat,
+            )
+        )
     return tuple(examples)
 
 

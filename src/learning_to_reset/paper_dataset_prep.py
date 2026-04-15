@@ -30,6 +30,7 @@ def export_paper_prepared_datasets(
     countdown_val_ratio: float = 0.1,
     allow_clean: bool = True,
     include_recovery_examples: bool = False,
+    recovery_repeat: int = 1,
 ) -> Dict[str, Any]:
     """Prepare artifacts using distinct Countdown train/eval source files."""
 
@@ -39,6 +40,7 @@ def export_paper_prepared_datasets(
     trace_examples = prepare_sft_examples(
         load_trace_records(trace_path),
         include_recovery_examples=include_recovery_examples,
+        recovery_repeat=recovery_repeat,
     )
     sft_train, sft_validation = _train_validation_split(trace_examples, val_ratio=sft_val_ratio)
 
@@ -73,6 +75,7 @@ def export_paper_prepared_datasets(
         },
         "allow_clean": allow_clean,
         "include_recovery_examples": include_recovery_examples,
+        "recovery_repeat": recovery_repeat,
         "sft_val_ratio": sft_val_ratio,
         "countdown_val_ratio": countdown_val_ratio,
     }

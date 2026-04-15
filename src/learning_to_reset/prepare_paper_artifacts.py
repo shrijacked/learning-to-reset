@@ -34,6 +34,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Append retry-stage recovery examples for traces that provide explicit recovery responses.",
     )
+    parser.add_argument(
+        "--recovery-repeat",
+        type=int,
+        default=1,
+        help="How many times to repeat each retry-stage recovery example when recovery augmentation is enabled.",
+    )
     return parser
 
 
@@ -48,6 +54,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         countdown_val_ratio=args.countdown_val_ratio,
         allow_clean=not args.disallow_clean,
         include_recovery_examples=args.include_recovery_examples,
+        recovery_repeat=args.recovery_repeat,
     )
     print(json.dumps(manifest, indent=2, ensure_ascii=True))
     return 0

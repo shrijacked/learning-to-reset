@@ -22,6 +22,8 @@ Implemented and verified:
 - a deterministic Countdown solver and synthetic Countdown-aligned fallback trace generator
 - automatic resolution of nested `best-checkpoint` and `final-checkpoint` model outputs
 - a first bounded multi-step cleaning extension with clean-budget and clean-penalty support
+- retry-stage recovery augmentation for fallback SFT preparation
+- a recovery-balance control for repeating retry-stage examples during fallback dataset prep
 - GitHub repository setup and CI for the test suite
 
 ## Working Baseline
@@ -47,6 +49,7 @@ What works today:
 - the repo can synthesize Countdown-aligned fallback traces locally when a stronger trace source is unavailable
 - the target Qwen model can complete a first local SFT checkpoint and a first local reset-aware RL checkpoint on a pilot subset
 - evaluation can load trainer output roots directly even when the actual model lives inside `best-checkpoint` or `final-checkpoint`
+- fallback SFT preparation can append retry-stage recovery examples and rebalance them explicitly
 
 What is not implemented yet:
 
@@ -67,18 +70,20 @@ Observed pilot outcome:
 - a Countdown-aligned synthetic fallback trace run also completed end to end on the same local slice
 - the synthetic SFT checkpoint still scored `0/4`, but it moved `clean_rate` to `1.0`, showing the model learned the reset action more strongly than the recovery action
 - the reset-aware RL stage on top of that synthetic SFT checkpoint also remained `0/4`
+- a stronger fallback SFT run with repeated retry-recovery supervision reached `valid_rate = 1.0` and `average_score = 0.1` on the held-out slice
+- the corresponding reset-aware RL run reached `validation_accuracy = 1/3` and `validation_average_score = 0.4` on its local validation slice, while the held-out slice stayed at `0/4` correct and `4/4` valid
 
 Interpretation:
 
 - the source wiring and runtime pipeline now work on real fetched assets
 - the current pilot is still too weak to claim meaningful paper-level performance
-- the main remaining baseline blocker is no longer missing plumbing; it is stronger post-clean recovery supervision and larger compute/data
+- the main remaining baseline blocker is no longer formatting or reset behavior; it is target-correctness after the clean step, plus larger compute/data
 - the first extension module is now implemented separately from the baseline path, so future work can extend beyond one-shot cleaning without destabilizing the paper baseline
 
 ## Remaining Engineering Work
 
 1. Replace the fallback trace slice with a stronger paper-native expert-trace source.
-2. Add recovery-oriented supervision so the post-clean retry path learns to finish with `<answer>`.
+2. Strengthen the fallback recovery path further so the post-clean retry stage learns target-correct expressions, not just legal ones.
 3. Re-run the SFT stage on a larger paper-aligned split.
 4. Re-run the reset-aware RLOO stage on top of that checkpoint.
 5. Evaluate on hard Countdown examples and compare against the default baseline.
@@ -93,6 +98,6 @@ Interpretation:
 ## Recommended Talking Points Right Now
 
 - the technical baseline is no longer just an idea; the core mechanics exist in code and are tested
-- the next meaningful milestone is a paper-native or stronger Countdown-aligned trace source, not another plumbing refactor
-- the model currently learns to clean more easily than it learns to recover, which is exactly where the next baseline and extension work should focus
+- the next meaningful milestone is stronger target-correct recovery after the clean step, ideally from a paper-native or stronger Countdown-aligned trace source
+- the model now reliably reaches legal post-clean expressions on the held-out slice, so the remaining gap is correctness rather than formatting
 - the most important future direction remains stronger context management beyond one-shot reset
