@@ -11,6 +11,7 @@ Implemented and verified:
 - prompt builders for SFT and reset-aware evaluation inputs
 - deterministic split and batching helpers for trainer preparation
 - JSONL export and CLI preparation path for trainer-ready splits
+- Countdown expression verification for generated answers
 - unit-test coverage for the baseline mechanics
 - GitHub repository setup and CI for the test suite
 
@@ -27,11 +28,12 @@ What works today:
 - reasoning prompts and SFT examples can be assembled from those records
 - prepared prompt examples can be split and batched for future trainers
 - split SFT/eval artifacts can be exported as JSONL with a manifest
+- generated Countdown answers can be checked for legality and target correctness
 
 What is not implemented yet:
 
 - wiring the preparation command to the real source datasets used by the project
-- countdown evaluation harness around actual model generations
+- model-generation orchestration around the verifier
 - trainer integration on top of the prepared batches
 - full SFT training loop
 - full RLOO training loop

@@ -12,6 +12,7 @@ The repository currently covers three core software primitives:
 - Dataset loaders and prompt builders for trace and Countdown-style records
 - Deterministic split and batching helpers for future training/evaluation loops
 - JSONL artifact export and CLI preparation command for trainer-ready splits
+- Countdown answer verification for evaluating generated expressions
 
 This is an initial research scaffold, not a full training pipeline yet. The next major milestone is wiring actual datasets and prepared batches into model training and evaluation loops.
 
@@ -63,5 +64,5 @@ tests/                     Regression tests for the current behavior
 
 1. Point the preparation command at the actual expert-trace and Countdown source files.
 2. Connect the prepared JSONL artifacts to real training loops.
-3. Add evaluation code around actual model generations.
+3. Hook real model generations into the Countdown verifier and evaluation flow.
 4. Extend the one-shot cleaner toward multi-step cleaning and selective memory retention.
