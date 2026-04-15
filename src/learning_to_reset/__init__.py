@@ -9,6 +9,14 @@ from learning_to_reset.context_manager import (
 )
 from learning_to_reset.data import CountdownSample, TraceRecord, load_countdown_samples, load_trace_records
 from learning_to_reset.demo import DemoSnapshot, build_demo_report, build_demo_snapshot
+from learning_to_reset.pipeline import (
+    DatasetSplit,
+    PromptBatch,
+    batch_prompt_examples,
+    prepare_countdown_examples,
+    prepare_sft_examples,
+    split_sequence,
+)
 from learning_to_reset.prompts import (
     PromptExample,
     build_countdown_prompt,
@@ -33,14 +41,17 @@ from learning_to_reset.trace_curation import (
 __all__ = [
     "CuratedTrace",
     "CountdownSample",
+    "DatasetSplit",
     "DemoSnapshot",
     "ManagedGeneration",
     "ModifiedRLOOResult",
     "NormalizedTrace",
+    "PromptBatch",
     "PromptExample",
     "TraceRecord",
     "TrajectorySample",
     "TrajectoryTerm",
+    "batch_prompt_examples",
     "build_countdown_prompt",
     "build_initial_prompt",
     "build_retry_prompt",
@@ -57,4 +68,7 @@ __all__ = [
     "load_trace_records",
     "manage_single_clean_cycle",
     "normalize_trace",
+    "prepare_countdown_examples",
+    "prepare_sft_examples",
+    "split_sequence",
 ]
