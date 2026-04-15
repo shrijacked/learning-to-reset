@@ -42,13 +42,16 @@
 - Verifier-grounded recovery ablations completed:
   - mixed verifier-grounded recovery reached `8/8` valid but `0/8` correct
   - balanced verifier-grounded recovery tied the best SFT result at `8/8` valid and `1/8` correct
+- Contrastive/all recovery ablation completed:
+  - half-epoch SFT used `2770` train examples and `396` validation examples
+  - reset-aware evaluation reached `7/8` valid but `0/8` correct
+  - raw one-pass decoding remained `0/8` valid and `0/8` correct
 - A runnable baseline demo is available through:
   - `PYTHONPATH=src python3 -m learning_to_reset`
 
 ## To Do
 
-- Run the new contrastive recovery trace source through SFT and held-out evaluation.
-- Add or build a stronger Countdown-native expert-trace source if contrastive traces still do not improve arithmetic correctness.
+- Add or build a stronger Countdown-native expert-trace source, or filter synthetic traces by target-correct post-clean recovery.
 - Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 - Scale the local CPU pilot into a larger target-model run.
 - Run raw-versus-reset-aware comparison on a larger hard Countdown slice.
@@ -56,10 +59,10 @@
 
 ## Next Plan
 
-1. Generate the contrastive recovery trace set from the same Countdown source split.
-2. Re-run SFT on that trace set and keep the same held-out comparison gate.
-3. Compare the contrastive SFT checkpoint against raw generation, the current expanded SFT checkpoint, and the RLOO checkpoint.
-4. Run reset-aware RLOO only if the improved SFT checkpoint beats the current `1/8` held-out correctness result.
+1. Improve the trace source before another expensive target-model run.
+2. Re-run SFT only when the new source is expected to beat the current `1/8` held-out correctness result.
+3. Compare the next SFT checkpoint against raw generation, expanded SFT, verifier-grounded SFT, and the RLOO checkpoint.
+4. Run reset-aware RLOO only if the improved SFT checkpoint beats the current held-out correctness gate.
 5. Continue the extension track with selective retention and recall-aware memory after the one-shot baseline is stronger.
 
 ## Latest Signal
@@ -68,6 +71,7 @@
 - The best expanded SFT checkpoint is `8/8` valid, `1/8` correct, with `clean_rate = 1.0` under reset-aware evaluation.
 - The balanced verifier-grounded checkpoint ties that best SFT result and also keeps `8/8` validity.
 - The mixed verifier-grounded checkpoint regressed to `0/8` correct, so adding more recovery-style traces by volume is not enough.
+- The contrastive/all checkpoint also regressed to `7/8` valid and `0/8` correct, so the next bet is trace quality, not trace volume.
 - The small RLOO pass is `7/8` valid and `1/8` correct on the same held-out slice, so it does not beat SFT yet.
 - Current blocker: arithmetic grounding on unseen Countdown prompts, not reset formatting.
 

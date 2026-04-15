@@ -61,6 +61,7 @@ What works today:
 - fallback SFT preparation can append retry-stage recovery examples and rebalance them explicitly
 - the held-out hard slice can now be scored in both raw one-pass mode and reset-aware retry mode from the same checkpoint
 - verifier-grounded SFT ablations can now be compared against the expanded SFT and RLOO checkpoints
+- contrastive recovery SFT ablations can now be compared against the expanded SFT and verifier-grounded checkpoints
 
 What is not implemented yet:
 
@@ -87,6 +88,8 @@ Observed pilot outcome:
 - a verifier-grounded mixed recovery ablation completed at half an epoch with `2010` train examples and `288` validation examples; it scored `8/8` valid, `0/8` correct, and `average_score = 0.10`
 - a balanced verifier-grounded recovery-only ablation completed with `1251` train examples, `179` validation examples, `train_loss = 0.1840`, and `eval_loss = 0.0545`
 - that verification-only checkpoint scored `0/8` valid and `0/8` correct in raw one-pass decoding, but `8/8` valid, `1/8` correct, `average_score = 0.225`, and `clean_rate = 1.0` with reset-aware retry evaluation
+- an all-style contrastive recovery ablation completed at half an epoch with `2770` train examples, `396` validation examples, `train_loss = 0.1324`, and `eval_loss = 0.0709`
+- that contrastive/all checkpoint scored `0/8` valid and `0/8` correct in raw one-pass decoding, and `7/8` valid, `0/8` correct, `average_score = 0.10`, and `clean_rate = 1.0` with reset-aware retry evaluation
 
 Interpretation:
 
@@ -94,15 +97,15 @@ Interpretation:
 - the raw-vs-reset-aware gap is now directly measured on an 8-example held-out slice: reset logic converts raw invalid outputs into valid retry answers
 - the best current local checkpoint is the expanded SFT checkpoint, not the small RLOO checkpoint, because it keeps the same held-out correctness while preserving full validity
 - the balanced verifier-grounded ablation ties the expanded SFT checkpoint on held-out correctness and validity, but does not improve beyond it
-- adding too many verifier-grounded recovery examples can reduce target correctness, so the next data step should improve trace quality rather than simply increasing reset-style volume
+- the contrastive/all ablation also regresses below the expanded SFT checkpoint, so the next data step should improve trace quality rather than simply increasing reset-style volume
 - the current pilot is still too weak to claim strong target-model performance
 - the main remaining baseline blocker is arithmetic grounding: the model often writes plausible step-by-step claims, but the verifier-computed expression value does not match the target
 - the first extension module remains separate from the baseline path, so future multi-clean work can proceed without destabilizing the one-shot baseline
 
 ## Remaining Engineering Work
 
-1. Run the new contrastive recovery trace source through the same SFT and held-out evaluation gate.
-2. Add a stronger Countdown-native expert-trace source if contrastive recovery data still does not improve arithmetic grounding beyond the current `1/8` held-out result.
+1. Add a stronger Countdown-native expert-trace source or filter synthetic recovery traces by target-correct post-clean behavior.
+2. Re-run SFT only after the trace source is expected to improve arithmetic grounding beyond the current `1/8` held-out result.
 3. Re-run reset-aware RLOO only after the SFT checkpoint produces stronger target-correct retries.
 4. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
 5. Run a larger raw-versus-reset-aware comparison on a broader hard Countdown slice.
@@ -120,5 +123,6 @@ Interpretation:
 - the repo now shows a direct held-out separation between raw one-pass failure and reset-aware valid retries
 - the next meaningful milestone is stronger target-correct recovery after the clean step, ideally from a paper-native or larger Countdown-aligned trace source
 - the expanded SFT and balanced verifier-grounded checkpoints both reach one target-correct held-out retry, while the small RLOO pass does not improve that held-out result
+- the contrastive/all ablation did not improve the held-out result, which narrows the next technical bet to better trace quality rather than more recovery trace volume
 - the model now reliably reaches mostly well-formed post-clean traces on the held-out slice, so the remaining gap is arithmetic correctness rather than reset formatting
 - the most important future direction remains stronger context management beyond one-shot reset

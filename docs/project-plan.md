@@ -51,6 +51,7 @@ flowchart LR
 | R8 | Add continuous verification for GitHub | repository bootstrap requirement | GitHub Actions workflow | CI run in GitHub |
 | R9 | Compare raw and reset-aware evaluation outputs | `main.pdf` Section 4 | `compare_eval_results.py` | `tests/test_compare_eval_results.py` |
 | R10 | Add contrastive recovery trace generation | `main.pdf` Section 3.2.1, Section 4 | `synthetic_countdown_traces.py` | `tests/test_synthetic_countdown_traces.py` |
+| R11 | Gate trace-source ablations by held-out Countdown correctness | `main.pdf` Section 4 | local run artifacts | reset-aware and raw eval summaries |
 | E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | future module | future tests |
 | E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | future module | future tests |
@@ -66,7 +67,7 @@ flowchart LR
 - Real-source/local-hybrid SFT, reset-aware RLOO, and raw-vs-reset-aware comparison have run on a CPU pilot
 - Raw-vs-reset-aware comparison can now be regenerated from evaluation output directories
 - Verifier-grounded recovery ablations have run, but they currently tie rather than beat the best expanded SFT result
-- Contrastive recovery trace generation exists for the next trace-quality ablation
+- Contrastive/all recovery ablation has run, but it regresses below the best expanded SFT result
 - Remaining baseline work is stronger arithmetic grounding, larger target-model execution, and broader experiment comparison
 
 ### Extension
