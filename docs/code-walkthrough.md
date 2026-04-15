@@ -8,16 +8,34 @@ This repository currently implements the baseline mechanics for a reset-aware re
 2. let the model emit a special `<clean>` token when its reasoning path becomes unproductive
 3. treat the final interaction outcome as the reward signal, whether the answer comes from the first try or from a retry after reset
 
-Right now, the repository is a mechanics-and-testing scaffold, not a full training system. The code is focused on the building blocks that the eventual SFT and RL pipeline will need.
+The repository now includes a local baseline runtime over prepared artifacts. In practice that means the repo can prepare data, run SFT, run a reset-aware RLOO loop, and evaluate with the one-shot clean retry path. What is still missing is the first real run on the target datasets and model checkpoints.
 
 ## Repo Map
 
 - `src/learning_to_reset/trace_curation.py`
   - prepares traces for reset-aware supervised fine-tuning
+- `src/learning_to_reset/data.py`
+  - loads trace and Countdown-style records from JSON/JSONL
+- `src/learning_to_reset/prompts.py`
+  - builds and parses reasoning prompts with optional clean instructions
+- `src/learning_to_reset/pipeline.py`
+  - converts records into split-ready prompt examples
+- `src/learning_to_reset/dataset_prep.py`
+  - exports trainer-ready JSONL artifacts and manifests
 - `src/learning_to_reset/context_manager.py`
   - handles the one-shot reset flow
+- `src/learning_to_reset/countdown_verifier.py`
+  - checks expression legality and whether a response hits the target
 - `src/learning_to_reset/rloo.py`
   - implements the reward math for reset-aware RLOO
+- `src/learning_to_reset/rollout_runtime.py`
+  - attaches reward breakdowns and trajectory objects to sampled responses
+- `src/learning_to_reset/sft_runtime.py`
+  - runs supervised fine-tuning on prepared artifacts
+- `src/learning_to_reset/eval_runtime.py`
+  - runs Countdown evaluation, defaulting to clean-aware retry behavior
+- `src/learning_to_reset/rloo_runtime.py`
+  - runs reset-aware rollouts, computes policy loss, writes metrics, and saves checkpoints
 - `src/learning_to_reset/demo.py`
   - gives a deterministic walkthrough of the current mechanics
 - `tests/`
@@ -99,6 +117,75 @@ Why it matters:
 
 - this is the main RL-specific logic in the repository
 - it captures the idea that a successful retry should reinforce both the decision to clean and the answer after the reset
+
+### `data.py`, `prompts.py`, `pipeline.py`, and `dataset_prep.py`
+
+These files turn raw project data into trainer-ready artifacts.
+
+Important pieces:
+
+- `TraceRecord` and `CountdownSample`
+  - dataclasses for the two main data sources in the project
+- `load_trace_records(...)` and `load_countdown_samples(...)`
+  - flexible JSON/JSONL loaders with alias handling
+- `build_reasoning_prompt(...)`
+  - creates prompts with base instructions, optional clean instructions, and the question
+- `parse_reasoning_prompt(...)`
+  - recovers the base instructions, clean instructions, and question from a prepared prompt
+- `prepare_sft_examples(...)` and `prepare_countdown_examples(...)`
+  - convert raw records into prompt examples for SFT and Countdown rollouts
+- `export_prepared_datasets(...)`
+  - writes split JSONL files plus a manifest for later runtimes
+
+Why they matter:
+
+- these files are the bridge between project data and every training or evaluation stage
+- they make the rest of the pipeline deterministic and easier to test
+
+### `countdown_verifier.py`
+
+This file is the reward and evaluation checker for arithmetic outputs.
+
+Important pieces:
+
+- `extract_answer_expression(...)`
+  - reads the final `<answer>` expression from a response
+- `verify_countdown_expression(...)`
+  - checks number usage, expression validity, and target reachability
+- `score_countdown_response(...)`
+  - packages the verification result for downstream reward logic
+
+Why it matters:
+
+- this is the ground-truth scoring layer used by evaluation and the RL runtime
+- it separates reasoning generation from arithmetic correctness checking
+
+### `rollout_runtime.py`, `sft_runtime.py`, `eval_runtime.py`, and `rloo_runtime.py`
+
+These files turn the math and prompt mechanics into runnable training and evaluation entrypoints.
+
+Important pieces:
+
+- `rollout_runtime.py`
+  - computes formatting and correctness rewards
+  - builds clean-aware trajectory objects for modified RLOO
+- `sft_runtime.py`
+  - loads prepared SFT JSONL
+  - tokenizes prompt/response pairs
+  - runs `transformers`-based supervised fine-tuning
+- `eval_runtime.py`
+  - scores generated Countdown answers
+  - defaults to the clean-aware retry path for the paper-style baseline
+- `rloo_runtime.py`
+  - samples `k` reset-aware trajectories per prompt
+  - computes modified-RLOO scaling
+  - assembles policy loss over `y0` and optional `y1`
+  - writes per-step metrics and saves checkpoints
+
+Why they matter:
+
+- this is where the repository stops being only a mechanics demo and becomes a runnable baseline
+- these entrypoints are what you would use to produce the first actual baseline runs
 
 ### `demo.py`
 
@@ -186,15 +273,13 @@ Checks that:
 
 The repository does not yet include:
 
-- expert-trace ingestion from full datasets
-- Countdown dataset adapters
-- prompt packing and batch construction for training
-- the full SFT loop
-- the full reset-aware RLOO loop
-- real experiment tracking and metrics
+- project-specific wiring to the actual expert-trace and Countdown source files
+- the first paper-aligned runs on the real target model
+- baseline-versus-reset-aware result tables on the hard Countdown slice
+- the extension stages: multi-step cleaning, selective retention, and recall-aware memory
 
 So the honest state is:
 
-- the mechanics are implemented
-- the engineering skeleton is solid
-- the end-to-end training pipeline is still to be built
+- the baseline mechanics are implemented
+- the local runtime pipeline is in place
+- the remaining gap is experiment execution on the real data and model setup

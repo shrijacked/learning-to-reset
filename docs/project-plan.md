@@ -29,9 +29,10 @@ flowchart TD
 ```mermaid
 flowchart LR
     P1["Trace curation"] --> P2["Context manager"]
-    P2 --> P3["Training loop integration"]
-    P3 --> P4["Evaluation pipeline"]
-    P2 --> E1["Multi-step cleaning"]
+    P2 --> P3["SFT runtime"]
+    P3 --> P4["Reset-aware RLOO runtime"]
+    P4 --> P5["Clean-aware evaluation"]
+    P4 --> E1["Multi-step cleaning"]
     E1 --> E2["Selective retention"]
     E2 --> E3["Memory recall"]
 ```
@@ -43,8 +44,11 @@ flowchart LR
 | R1 | Normalize and curate SFT traces | `main.pdf` Section 3.2.1, Figure 3 | `trace_curation.py` | `tests/test_trace_curation.py` |
 | R2 | Implement one-shot clean context manager | `main.pdf` Section 3.2.2, Figure 4 | `context_manager.py` | `tests/test_context_manager.py` |
 | R3 | Encode modified RLOO math | `main.pdf` Section 3.2.3, Eq. 4-6 | `rloo.py` | `tests/test_rloo.py` |
-| R4 | Keep the repo aligned for later sessions | User request + current workflow | repo-local skill | skill file review |
-| R5 | Add continuous verification for GitHub | repository bootstrap requirement | GitHub Actions workflow | CI run in GitHub |
+| R4 | Add prepared-artifact SFT runtime | `main.pdf` Section 3.2.1, Section 4.1 | `sft_runtime.py` | `tests/test_sft_runtime.py` |
+| R5 | Add clean-aware evaluation runtime | `main.pdf` Section 3.2.2, Section 4 | `eval_runtime.py` | `tests/test_eval_runtime.py` |
+| R6 | Add reset-aware RLOO runtime | `main.pdf` Section 3.2.3, Section 4.1 | `rloo_runtime.py` | `tests/test_rloo_runtime.py`, tiny-model smoke run |
+| R7 | Keep the repo aligned for later sessions | User request + current workflow | repo-local skill | skill file review |
+| R8 | Add continuous verification for GitHub | repository bootstrap requirement | GitHub Actions workflow | CI run in GitHub |
 | E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | future module | future tests |
 | E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | future module | future tests |
 | E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | future module | future tests |
@@ -56,7 +60,8 @@ flowchart LR
 - Single-use cleaning only
 - No external memory writes or reads
 - Final reward assigned to the end-to-end interaction
-- Countdown-focused evaluation
+- Prepared-artifact SFT, reset-aware RLOO, and clean-aware evaluation runtimes exist locally
+- Remaining baseline work is real dataset/model execution and experiment comparison
 
 ### Extension
 

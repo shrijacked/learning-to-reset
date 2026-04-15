@@ -49,8 +49,36 @@ Current requirement:
   - `y0` for learning whether to clean
   - `y1` for learning how to answer after cleaning
 - Normalize by `k + kc`, where `kc` is the number of cleaned trajectories in the batch.
+- Track formatting-plus-correctness for reporting, while allowing the policy update to use correctness-only reward as described in Section 4.1.
 
-### 4. Experimental Anchor
+### 4. Baseline Runtime Loop
+
+Reference:
+- Section 3.2.2
+- Section 3.2.3
+- Section 4.1
+
+Implemented shape:
+
+```mermaid
+flowchart LR
+    A["Prepared Countdown prompt x"] --> B["Generate y0"]
+    B --> C{"clean requested?"}
+    C -->|No| D["Score y0"]
+    C -->|Yes| E["Retry prompt without clean instructions"]
+    E --> F["Generate y1"]
+    F --> G["Score y1"]
+    D --> H["Interaction reward"]
+    G --> H["Interaction reward"]
+    H --> I["Leave-one-out advantage"]
+    I --> J["Policy loss over y0 and optional y1"]
+```
+
+Runtime notes:
+- Clean-aware evaluation should use the retry path by default.
+- The baseline still allows at most one clean per interaction.
+- Local metrics should track score, accuracy, clean rate, and checkpoint outputs per run.
+### 5. Experimental Anchor
 
 Reference:
 - Section 4

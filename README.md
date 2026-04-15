@@ -13,8 +13,12 @@ The repository currently covers three core software primitives:
 - Deterministic split and batching helpers for future training/evaluation loops
 - JSONL artifact export and CLI preparation command for trainer-ready splits
 - Countdown answer verification for evaluating generated expressions
+- SFT runtime for prepared supervised traces
+- Clean-aware reward and trajectory assembly for Countdown rollouts
+- Reset-aware RLOO runtime with local metrics and checkpointing
+- Clean-aware evaluation that retries once after `<clean>` by default
 
-This is an initial research scaffold, not a full training pipeline yet. The next major milestone is wiring actual datasets and prepared batches into model training and evaluation loops.
+The repository now supports the baseline pipeline over prepared artifacts: prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is wiring the real datasets and model checkpoints into that pipeline and producing the paper-aligned experiment runs.
 
 ## Project Docs
 
@@ -41,6 +45,13 @@ Run the baseline mechanics demo:
 PYTHONPATH=src python3 -m learning_to_reset
 ```
 
+Install the local training stack:
+
+```bash
+python3 -m venv .venv
+./.venv/bin/pip install transformers datasets accelerate torch
+```
+
 Prepare split JSONL artifacts from raw trace and Countdown files:
 
 ```bash
@@ -48,6 +59,36 @@ PYTHONPATH=src python3 -m learning_to_reset.prepare_artifacts \
   --traces path/to/traces.jsonl \
   --countdown path/to/countdown.jsonl \
   --output-dir output/prepared
+```
+
+Run SFT on prepared artifacts:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.sft_runtime \
+  --train output/prepared/sft-train.jsonl \
+  --validation output/prepared/sft-validation.jsonl \
+  --model path/or/model-name \
+  --output-dir output/checkpoints/sft
+```
+
+Run Countdown generation and scoring:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.eval_runtime \
+  --prepared-countdown output/prepared/countdown-test.jsonl \
+  --model path/or/model-name \
+  --output-dir output/eval/countdown
+```
+
+Run reset-aware RLOO on prepared Countdown prompts:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.rloo_runtime \
+  --train output/prepared/countdown-train.jsonl \
+  --validation output/prepared/countdown-validation.jsonl \
+  --model output/checkpoints/sft \
+  --output-dir output/checkpoints/rloo \
+  --responses-per-prompt 4
 ```
 
 ## Repository Layout
@@ -63,6 +104,7 @@ tests/                     Regression tests for the current behavior
 ## Immediate Next Steps
 
 1. Point the preparation command at the actual expert-trace and Countdown source files.
-2. Connect the prepared JSONL artifacts to real training loops.
-3. Hook real model generations into the Countdown verifier and evaluation flow.
-4. Extend the one-shot cleaner toward multi-step cleaning and selective memory retention.
+2. Run the SFT runtime against the actual model and prepared splits.
+3. Run the reset-aware RLOO runtime on top of the SFT checkpoint and collect the first real metrics.
+4. Evaluate the hard Countdown slice against the default baseline.
+5. Extend the one-shot cleaner toward multi-step cleaning and selective memory retention.
