@@ -8,6 +8,7 @@ from learning_to_reset.context_manager import (
     manage_single_clean_cycle,
     response_requests_clean_retry,
 )
+from learning_to_reset.countdown_solver import CountdownExpression, solve_countdown
 from learning_to_reset.countdown_verifier import (
     VerificationResult,
     extract_answer_expression,
@@ -92,6 +93,13 @@ from learning_to_reset.sft_runtime import (
     tokenize_training_example,
     train_sft,
 )
+from learning_to_reset.synthetic_countdown_traces import (
+    build_negative_expression,
+    build_negative_trace_record,
+    build_positive_trace_record,
+    build_synthetic_trace_records,
+    generate_synthetic_trace_corpus,
+)
 from learning_to_reset.trace_bootstrap import (
     build_bootstrap_negative_record,
     build_bootstrap_trace_corpus,
@@ -108,6 +116,7 @@ from learning_to_reset.trace_curation import (
 __all__ = [
     "CuratedTrace",
     "CountdownSample",
+    "CountdownExpression",
     "CleanTrajectory",
     "DEFAULT_COUNTDOWN_EVAL_DATASET_ID",
     "DEFAULT_COUNTDOWN_TRAIN_DATASET_ID",
@@ -123,6 +132,10 @@ __all__ = [
     "build_bootstrap_negative_record",
     "build_bootstrap_trace_corpus",
     "build_clean_trajectory",
+    "build_negative_expression",
+    "build_negative_trace_record",
+    "build_positive_trace_record",
+    "build_synthetic_trace_records",
     "evaluate_countdown_outputs",
     "expand_countdown_hf_row",
     "export_prepared_datasets",
@@ -179,6 +192,7 @@ __all__ = [
     "rollout_countdown_example",
     "score_countdown_response",
     "serialize_prompt_example",
+    "solve_countdown",
     "split_sequence",
     "summarize_rollout_candidates",
     "build_trace_record_from_response",
@@ -189,6 +203,7 @@ __all__ = [
     "verify_countdown_expression",
     "write_evaluation_outputs",
     "write_bootstrap_trace_corpus",
+    "generate_synthetic_trace_corpus",
     "write_jsonl_records",
     "write_prompt_examples_jsonl",
 ]
