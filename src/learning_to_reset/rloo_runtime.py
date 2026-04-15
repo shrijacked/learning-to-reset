@@ -12,6 +12,7 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 from learning_to_reset.context_manager import response_requests_clean_retry
 from learning_to_reset.countdown_verifier import score_countdown_response
 from learning_to_reset.data import CountdownSample
+from learning_to_reset.model_resolver import resolve_model_name_or_path
 from learning_to_reset.prompts import PromptExample, parse_reasoning_prompt
 from learning_to_reset.rollout_runtime import CleanTrajectory, build_clean_trajectory
 from learning_to_reset.rloo import ModifiedRLOOResult, TrajectorySample, compute_modified_rloo_terms
@@ -449,8 +450,9 @@ def evaluate_reset_aware_model(
 
     torch, AutoModelForCausalLM, AutoTokenizer = _require_transformers()
     selected_device = _select_device(torch, device)
-    tokenizer = _prepare_tokenizer(AutoTokenizer.from_pretrained(model_name_or_path))
-    model = AutoModelForCausalLM.from_pretrained(model_name_or_path)
+    resolved_model_path = resolve_model_name_or_path(model_name_or_path)
+    tokenizer = _prepare_tokenizer(AutoTokenizer.from_pretrained(resolved_model_path))
+    model = AutoModelForCausalLM.from_pretrained(resolved_model_path)
     if getattr(model.config, "vocab_size", 0) < len(tokenizer):
         model.resize_token_embeddings(len(tokenizer))
     model.to(selected_device)
@@ -505,8 +507,9 @@ def train_rloo(
     _set_seed(seed)
     selected_device = _select_device(torch, device)
 
-    tokenizer = _prepare_tokenizer(AutoTokenizer.from_pretrained(model_name_or_path))
-    model = AutoModelForCausalLM.from_pretrained(model_name_or_path)
+    resolved_model_path = resolve_model_name_or_path(model_name_or_path)
+    tokenizer = _prepare_tokenizer(AutoTokenizer.from_pretrained(resolved_model_path))
+    model = AutoModelForCausalLM.from_pretrained(resolved_model_path)
     if getattr(model.config, "vocab_size", 0) < len(tokenizer):
         model.resize_token_embeddings(len(tokenizer))
     model.to(selected_device)

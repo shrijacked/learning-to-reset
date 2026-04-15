@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from learning_to_reset.countdown_verifier import score_countdown_response
 from learning_to_reset.data import CountdownSample
+from learning_to_reset.model_resolver import resolve_model_name_or_path
 from learning_to_reset.prompts import PromptExample
 from learning_to_reset.sft_runtime import load_prepared_examples
 
@@ -95,14 +96,15 @@ def generate_countdown_responses(
     """Generate responses for prepared Countdown prompts."""
 
     torch, AutoModelForCausalLM, AutoTokenizer = _require_transformers()
-    tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+    resolved_model_path = resolve_model_name_or_path(model_name_or_path)
+    tokenizer = AutoTokenizer.from_pretrained(resolved_model_path)
     if tokenizer.pad_token_id is None:
         if tokenizer.eos_token_id is not None:
             tokenizer.pad_token = tokenizer.eos_token
         else:
             tokenizer.add_special_tokens({"pad_token": "<pad>"})
 
-    model = AutoModelForCausalLM.from_pretrained(model_name_or_path)
+    model = AutoModelForCausalLM.from_pretrained(resolved_model_path)
     if getattr(model.config, "vocab_size", 0) < len(tokenizer):
         model.resize_token_embeddings(len(tokenizer))
 

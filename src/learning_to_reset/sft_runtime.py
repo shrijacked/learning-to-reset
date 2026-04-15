@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
+from learning_to_reset.model_resolver import resolve_model_name_or_path
 from learning_to_reset.prompts import PromptExample
 
 
@@ -137,7 +138,8 @@ def train_sft(
 
     Dataset, AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments = _require_transformers()
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+    resolved_model_path = resolve_model_name_or_path(model_name_or_path)
+    tokenizer = AutoTokenizer.from_pretrained(resolved_model_path)
     if tokenizer.pad_token_id is None:
         if tokenizer.eos_token_id is not None:
             tokenizer.pad_token = tokenizer.eos_token
@@ -156,7 +158,7 @@ def train_sft(
             [tokenize_training_example(example, tokenizer, max_length=max_length) for example in validation_examples]
         )
 
-    model = AutoModelForCausalLM.from_pretrained(model_name_or_path)
+    model = AutoModelForCausalLM.from_pretrained(resolved_model_path)
     if getattr(model.config, "vocab_size", 0) < len(tokenizer):
         model.resize_token_embeddings(len(tokenizer))
 

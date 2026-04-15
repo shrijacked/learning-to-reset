@@ -29,6 +29,7 @@ from learning_to_reset.eval_runtime import (
     generate_countdown_responses,
     write_evaluation_outputs,
 )
+from learning_to_reset.model_resolver import default_hf_cache_root, resolve_model_name_or_path
 from learning_to_reset.paper_dataset_prep import export_paper_prepared_datasets
 from learning_to_reset.paper_sources import (
     DEFAULT_COUNTDOWN_EVAL_DATASET_ID,
@@ -91,6 +92,11 @@ from learning_to_reset.sft_runtime import (
     tokenize_training_example,
     train_sft,
 )
+from learning_to_reset.trace_bootstrap import (
+    build_bootstrap_negative_record,
+    build_bootstrap_trace_corpus,
+    write_bootstrap_trace_corpus,
+)
 from learning_to_reset.trace_generation import build_trace_record_from_response, generate_trace_records
 from learning_to_reset.trace_curation import (
     CuratedTrace,
@@ -112,7 +118,10 @@ __all__ = [
     "DemoSnapshot",
     "VerificationResult",
     "RewardBreakdown",
+    "default_hf_cache_root",
     "build_countdown_sample_from_example",
+    "build_bootstrap_negative_record",
+    "build_bootstrap_trace_corpus",
     "build_clean_trajectory",
     "evaluate_countdown_outputs",
     "expand_countdown_hf_row",
@@ -165,6 +174,7 @@ __all__ = [
     "prepare_countdown_split",
     "prepare_sft_examples",
     "prepare_trace_split",
+    "resolve_model_name_or_path",
     "response_requests_clean_retry",
     "rollout_countdown_example",
     "score_countdown_response",
@@ -178,6 +188,7 @@ __all__ = [
     "train_sft",
     "verify_countdown_expression",
     "write_evaluation_outputs",
+    "write_bootstrap_trace_corpus",
     "write_jsonl_records",
     "write_prompt_examples_jsonl",
 ]
