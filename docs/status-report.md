@@ -28,7 +28,7 @@ Implemented and verified:
 - automatic resolution of nested `best-checkpoint` and `final-checkpoint` model outputs
 - a first bounded multi-step cleaning extension with clean-budget and clean-penalty support
 - a selective-retention extension that carries explicit retained notes into retry prompts after clean
-- a recall-aware memory extension with explicit memory writes and deterministic recall prompts
+- a recall-aware memory extension with explicit memory writes, deterministic recall prompts, and a memory-aware clean loop
 - retry-stage recovery augmentation for fallback SFT preparation
 - a recovery-balance control for repeating retry-stage examples during fallback dataset prep
 - an opt-in verifier gate that keeps only target-correct retry-stage recovery examples when Countdown metadata is available
@@ -106,7 +106,7 @@ Interpretation:
 - the main remaining baseline blocker is arithmetic grounding: the model often writes plausible step-by-step claims, but the verifier-computed expression value does not match the target
 - the first extension module remains separate from the baseline path, so future multi-clean work can proceed without destabilizing the one-shot baseline
 - the second extension module now supports explicit retained notes after clean, while still avoiding full scratchpad carryover
-- the recall-aware memory module now provides a simple external-memory baseline for future extension experiments
+- the recall-aware memory module now provides a runnable external-memory clean-loop baseline for future extension experiments
 
 ## Remaining Engineering Work
 
@@ -115,7 +115,7 @@ Interpretation:
 3. Re-run reset-aware RLOO only after the SFT checkpoint produces stronger target-correct retries.
 4. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
 5. Run a larger raw-versus-reset-aware comparison on a broader hard Countdown slice.
-6. Connect selective retention and recall-aware memory to larger train/eval experiments.
+6. Compare full reset, selective retention, and memory-aware clean loops in larger train/eval experiments.
 
 ## Remaining Non-Engineering Work
 
@@ -131,4 +131,4 @@ Interpretation:
 - the expanded SFT and balanced verifier-grounded checkpoints both reach one target-correct held-out retry, while the small RLOO pass does not improve that held-out result
 - the contrastive/all ablation did not improve the held-out result, which narrows the next technical bet to better trace quality rather than more recovery trace volume
 - the model now reliably reaches mostly well-formed post-clean traces on the held-out slice, so the remaining gap is arithmetic correctness rather than reset formatting
-- the most important future direction remains stronger context management beyond one-shot reset, now including selective retention and explicit recall memory
+- the most important future direction remains stronger context management beyond one-shot reset, now including selective retention and memory-aware clean loops

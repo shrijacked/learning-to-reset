@@ -38,10 +38,15 @@ from learning_to_reset.eval_runtime import (
 )
 from learning_to_reset.model_resolver import default_hf_cache_root, resolve_model_name_or_path
 from learning_to_reset.memory_extension import (
+    ManagedMemoryCleanGeneration,
     MemoryEntry,
+    MemoryCleanSegment,
+    MemoryCleanTrajectory,
     RecallMemoryStore,
+    build_memory_clean_trajectory,
     build_recall_prompt,
     extract_memory_writes,
+    manage_memory_clean_cycles,
 )
 from learning_to_reset.multi_clean_extension import (
     ManagedMultiCleanGeneration,
@@ -161,7 +166,10 @@ __all__ = [
     "DatasetSplit",
     "DemoSnapshot",
     "ManagedMultiCleanGeneration",
+    "ManagedMemoryCleanGeneration",
     "MemoryEntry",
+    "MemoryCleanSegment",
+    "MemoryCleanTrajectory",
     "MultiCleanSegment",
     "MultiCleanTrajectory",
     "VerificationResult",
@@ -173,6 +181,7 @@ __all__ = [
     "build_clean_trajectory",
     "build_evaluation_comparison",
     "build_multi_clean_trajectory",
+    "build_memory_clean_trajectory",
     "build_retained_retry_prompt",
     "build_selective_retention_trajectory",
     "build_negative_expression",
@@ -236,6 +245,7 @@ __all__ = [
     "load_prepared_examples",
     "manage_single_clean_cycle",
     "manage_bounded_clean_cycles",
+    "manage_memory_clean_cycles",
     "manage_selective_retention_clean_cycles",
     "normalize_trace",
     "parse_countdown_user_prompt",

@@ -48,7 +48,7 @@ The repository now includes a local baseline runtime over prepared artifacts. In
   - implements the bounded multi-clean extension path with a reset budget and per-clean penalty
   - implements selective retention through explicit `<retain>...</retain>` notes carried into retry prompts
 - `src/learning_to_reset/memory_extension.py`
-  - implements explicit memory writes and deterministic recall prompt augmentation
+  - implements explicit memory writes, deterministic recall prompt augmentation, and a memory-aware clean loop
 - `src/learning_to_reset/demo.py`
   - gives a deterministic walkthrough of the current mechanics
 - `tests/`
@@ -247,11 +247,16 @@ Important pieces:
   - recalls entries by deterministic token overlap with a new query
 - `build_recall_prompt(...)`
   - appends recalled entries to a retry prompt
+- `manage_memory_clean_cycles(...)`
+  - writes memory from each response and recalls relevant entries into retry prompts after clean
+- `build_memory_clean_trajectory(...)`
+  - applies final-answer reward accounting and clean penalties to the memory-aware clean loop
 
 Why it matters:
 
 - it gives the project a concrete memory-aware extension without hiding state inside the model
 - it makes memory use inspectable, testable, and separable from the one-shot baseline
+- it turns memory from a passive store into a runnable context-management controller
 
 ### `demo.py`
 

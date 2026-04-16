@@ -37,7 +37,7 @@
   - bounded multi-step cleaning
   - per-clean penalty support
   - explicit selective retention with `<retain>...</retain>` notes carried into retry prompts
-  - recall-aware memory with `<memory>...</memory>` writes and deterministic recall prompts
+  - recall-aware memory with `<memory>...</memory>` writes, deterministic recall prompts, and a memory-aware clean loop
 - The latest expanded local run completed:
   - expanded SFT reached `8/8` valid and `1/8` correct on the held-out reset-aware slice
   - raw one-pass decoding stayed `0/8` valid
@@ -59,7 +59,7 @@
 - Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 - Scale the local CPU pilot into a larger target-model run.
 - Run raw-versus-reset-aware comparison on a larger hard Countdown slice.
-- Connect selective retention and recall-aware memory to larger train/eval experiments.
+- Compare full reset, selective retention, and memory-aware clean loops in larger train/eval experiments.
 
 ## Next Plan
 
@@ -67,7 +67,7 @@
 2. Re-run SFT only when the filtered source is expected to beat the current `1/8` held-out correctness result.
 3. Compare the next SFT checkpoint against raw generation, expanded SFT, verifier-grounded SFT, and the RLOO checkpoint.
 4. Run reset-aware RLOO only if the improved SFT checkpoint beats the current held-out correctness gate.
-5. Continue the extension track by comparing full reset, selective retention, and recall memory after the one-shot baseline is stronger.
+5. Continue the extension track by comparing full reset, selective retention, and memory-aware clean loops after the one-shot baseline is stronger.
 
 ## Latest Signal
 

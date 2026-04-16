@@ -31,6 +31,7 @@ Current status:
   - explicit `<memory>...</memory>` writes
   - deterministic token-overlap recall
   - prompt augmentation for recalled entries
+  - a bounded clean loop that writes memory before reset and recalls it into retry prompts
 
 Core changes:
 - Add a reset budget `k > 1`
@@ -64,7 +65,7 @@ Goal:
 
 Current status:
 - A lightweight memory store exists for explicit writes and deterministic recall.
-- Recall prompt construction is implemented separately from the baseline clean path.
+- A memory-aware clean loop now connects writes, recall prompts, and clean-step reward accounting.
 
 Core changes:
 - Introduce explicit write and recall actions
@@ -88,4 +89,4 @@ flowchart TD
 - The baseline matches the intended qualitative behavior and core reward logic.
 - Extensions improve hard-example performance without collapsing into excessive resets.
 - The agent becomes more selective over time, not merely more active.
-- The extension code path is in place; the next extension milestone is comparative train/eval across full reset, selective retention, and recall-aware memory.
+- The extension code path is in place; the next extension milestone is comparative train/eval across full reset, selective retention, and memory-aware clean loops.
