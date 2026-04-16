@@ -42,6 +42,9 @@ The repository now includes a local baseline runtime over prepared artifacts. In
 - `src/learning_to_reset/compare_eval_results.py`
   - compares raw one-pass and reset-aware evaluation summaries
   - writes compact JSON and Markdown artifacts for result tables
+- `src/learning_to_reset/extension_comparison.py`
+  - compares full reset, selective retention, and memory-aware clean trajectories
+  - writes compact JSON and Markdown artifacts for extension result tables
 - `src/learning_to_reset/rloo_runtime.py`
   - runs reset-aware rollouts, computes policy loss, writes metrics, and saves checkpoints
 - `src/learning_to_reset/multi_clean_extension.py`
@@ -257,6 +260,26 @@ Why it matters:
 - it gives the project a concrete memory-aware extension without hiding state inside the model
 - it makes memory use inspectable, testable, and separable from the one-shot baseline
 - it turns memory from a passive store into a runnable context-management controller
+
+### `extension_comparison.py`
+
+This file compares extension controllers on prepared response sequences.
+
+Important pieces:
+
+- `ExtensionComparisonRow`
+  - stores clean count, final answer, total reward, and adjusted reward for one mode
+- `compare_extension_trajectories(...)`
+  - runs full reset, selective retention, and memory-aware clean loops on the same Countdown sample
+- `render_extension_comparison_markdown(...)`
+  - renders a compact table for collaborator review
+- `write_extension_comparison_outputs(...)`
+  - writes JSON and Markdown artifacts for experiment folders
+
+Why it matters:
+
+- it gives the extension track a shared scoring surface before larger model runs
+- it makes the tradeoff between reset, retention, and recall inspectable
 
 ### `demo.py`
 

@@ -38,6 +38,7 @@
   - per-clean penalty support
   - explicit selective retention with `<retain>...</retain>` notes carried into retry prompts
   - recall-aware memory with `<memory>...</memory>` writes, deterministic recall prompts, and a memory-aware clean loop
+  - extension comparison tables for full reset, selective retention, and memory-aware clean loops
 - The latest expanded local run completed:
   - expanded SFT reached `8/8` valid and `1/8` correct on the held-out reset-aware slice
   - raw one-pass decoding stayed `0/8` valid
@@ -59,7 +60,7 @@
 - Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 - Scale the local CPU pilot into a larger target-model run.
 - Run raw-versus-reset-aware comparison on a larger hard Countdown slice.
-- Compare full reset, selective retention, and memory-aware clean loops in larger train/eval experiments.
+- Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
 
 ## Next Plan
 

@@ -32,6 +32,9 @@ Current status:
   - deterministic token-overlap recall
   - prompt augmentation for recalled entries
   - a bounded clean loop that writes memory before reset and recalls it into retry prompts
+- An extension comparison utility now exists locally with:
+  - full-reset, selective-retention, and memory-aware trajectory scoring
+  - JSON and Markdown outputs for experiment folders
 
 Core changes:
 - Add a reset budget `k > 1`
@@ -89,4 +92,4 @@ flowchart TD
 - The baseline matches the intended qualitative behavior and core reward logic.
 - Extensions improve hard-example performance without collapsing into excessive resets.
 - The agent becomes more selective over time, not merely more active.
-- The extension code path is in place; the next extension milestone is comparative train/eval across full reset, selective retention, and memory-aware clean loops.
+- The extension code path and comparison surface are in place; the next extension milestone is scaled train/eval across full reset, selective retention, and memory-aware clean loops.

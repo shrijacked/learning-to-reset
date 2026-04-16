@@ -29,6 +29,7 @@ Implemented and verified:
 - a first bounded multi-step cleaning extension with clean-budget and clean-penalty support
 - a selective-retention extension that carries explicit retained notes into retry prompts after clean
 - a recall-aware memory extension with explicit memory writes, deterministic recall prompts, and a memory-aware clean loop
+- a comparison utility for full reset, selective retention, and memory-aware clean trajectories
 - retry-stage recovery augmentation for fallback SFT preparation
 - a recovery-balance control for repeating retry-stage examples during fallback dataset prep
 - an opt-in verifier gate that keeps only target-correct retry-stage recovery examples when Countdown metadata is available
@@ -66,6 +67,7 @@ What works today:
 - the held-out hard slice can now be scored in both raw one-pass mode and reset-aware retry mode from the same checkpoint
 - verifier-grounded SFT ablations can now be compared against the expanded SFT and RLOO checkpoints
 - contrastive recovery SFT ablations can now be compared against the expanded SFT and verifier-grounded checkpoints
+- extension trajectories can now be compared in a shared reward table before scaling to larger train/eval runs
 
 What is not implemented yet:
 
@@ -115,7 +117,7 @@ Interpretation:
 3. Re-run reset-aware RLOO only after the SFT checkpoint produces stronger target-correct retries.
 4. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
 5. Run a larger raw-versus-reset-aware comparison on a broader hard Countdown slice.
-6. Compare full reset, selective retention, and memory-aware clean loops in larger train/eval experiments.
+6. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
 
 ## Remaining Non-Engineering Work
 

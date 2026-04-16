@@ -56,6 +56,7 @@ flowchart LR
 | E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | `memory_extension.py` | `tests/test_memory_extension.py` |
+| E4 | Compare extension controller trajectories | Extension evaluation plan | `extension_comparison.py` | `tests/test_extension_comparison.py` |
 
 ## Current Boundary
 
@@ -79,6 +80,7 @@ flowchart LR
 - Reward shaping that penalizes excessive resets
 - Selective deletion or summarization instead of full deletion
 - External memory recall exists through explicit `<memory>...</memory>` writes and deterministic token-overlap retrieval
+- Extension controller comparisons can be rendered as JSON and Markdown artifacts
 
 ## Verification Rule
 

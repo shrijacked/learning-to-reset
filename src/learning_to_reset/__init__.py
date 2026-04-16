@@ -36,6 +36,13 @@ from learning_to_reset.eval_runtime import (
     generate_countdown_responses,
     write_evaluation_outputs,
 )
+from learning_to_reset.extension_comparison import (
+    ExtensionComparison,
+    ExtensionComparisonRow,
+    compare_extension_trajectories,
+    render_extension_comparison_markdown,
+    write_extension_comparison_outputs,
+)
 from learning_to_reset.model_resolver import default_hf_cache_root, resolve_model_name_or_path
 from learning_to_reset.memory_extension import (
     ManagedMemoryCleanGeneration,
@@ -165,6 +172,8 @@ __all__ = [
     "DEFAULT_TRACE_SOURCE_MODEL_ID",
     "DatasetSplit",
     "DemoSnapshot",
+    "ExtensionComparison",
+    "ExtensionComparisonRow",
     "ManagedMultiCleanGeneration",
     "ManagedMemoryCleanGeneration",
     "MemoryEntry",
@@ -229,6 +238,7 @@ __all__ = [
     "compute_policy_loss",
     "compute_total_reward",
     "compute_countdown_reward",
+    "compare_extension_trajectories",
     "curate_trace",
     "evaluate_reset_aware_model",
     "evaluate_rollout_candidates",
@@ -265,12 +275,14 @@ __all__ = [
     "build_trace_record_from_response",
     "render_training_text",
     "render_comparison_markdown",
+    "render_extension_comparison_markdown",
     "tokenize_training_example",
     "train_rloo",
     "train_sft",
     "verify_countdown_expression",
     "write_evaluation_outputs",
     "write_comparison_outputs",
+    "write_extension_comparison_outputs",
     "write_bootstrap_trace_corpus",
     "generate_synthetic_trace_corpus",
     "generate_synthetic_countdown_dataset",
