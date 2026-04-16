@@ -54,7 +54,7 @@ flowchart LR
 | R11 | Gate trace-source ablations by held-out Countdown correctness | `main.pdf` Section 4 | local run artifacts | reset-aware and raw eval summaries |
 | R12 | Filter retry-stage recovery examples by verifier correctness | `main.pdf` Section 4 | `pipeline.py`, `prepare_paper_artifacts.py` | `tests/test_pipeline.py`, `tests/test_paper_dataset_prep.py` |
 | E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
-| E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | future module | future tests |
+| E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | future module | future tests |
 
 ## Current Boundary
@@ -75,6 +75,7 @@ flowchart LR
 ### Extension
 
 - Bounded multi-clean support exists with a clean budget and per-clean penalty
+- Selective retention support exists through explicit `<retain>...</retain>` notes carried into retry prompts
 - Reward shaping that penalizes excessive resets
 - Selective deletion or summarization instead of full deletion
 - External memory recall or retrieval

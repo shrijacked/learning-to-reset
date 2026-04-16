@@ -46,6 +46,7 @@ The repository now includes a local baseline runtime over prepared artifacts. In
   - runs reset-aware rollouts, computes policy loss, writes metrics, and saves checkpoints
 - `src/learning_to_reset/multi_clean_extension.py`
   - implements the bounded multi-clean extension path with a reset budget and per-clean penalty
+  - implements selective retention through explicit `<retain>...</retain>` notes carried into retry prompts
 - `src/learning_to_reset/demo.py`
   - gives a deterministic walkthrough of the current mechanics
 - `tests/`
@@ -213,14 +214,21 @@ Important pieces:
 - `manage_bounded_clean_cycles(...)`
   - allows multiple clean requests up to a fixed budget
   - stops once a normal answer appears or the budget is exhausted
+- `extract_retained_notes(...)`
+  - reads explicit `<retain>...</retain>` snippets from a response before clean
+- `manage_selective_retention_clean_cycles(...)`
+  - keeps only those retained snippets across reset instead of carrying the whole previous scratchpad
 - `build_multi_clean_trajectory(...)`
   - computes reward accounting over the bounded interaction
   - subtracts a small penalty for each clean action
+- `build_selective_retention_trajectory(...)`
+  - applies the same reward accounting to the selective-retention interaction
 
 Why it matters:
 
 - it keeps the one-shot baseline stable while giving the extension track a tested place to grow
 - it lets the project study whether extra resets help or whether the model starts using reset too aggressively
+- it gives the project a middle ground between full deletion and unsafe full scratchpad retention
 
 ### `demo.py`
 
@@ -302,7 +310,7 @@ Checks that:
 - `baseline`
   - the currently implemented one-shot reset mechanics
 - `extension`
-  - future work such as multi-step cleaning, selective retention, and recall-aware memory
+  - project track for mechanisms beyond one-shot reset, including multi-step cleaning, selective retention, and recall-aware memory
 
 ## What Is Not in the Code Yet
 
@@ -311,7 +319,7 @@ The repository does not yet include:
 - a strong expert-trace source with both productive and unproductive tagged Countdown traces
 - a larger target-model run with enough data and compute to produce nontrivial Countdown accuracy
 - a scaled raw-versus-reset-aware table on a larger hard Countdown slice
-- extension stages beyond bounded multi-step cleaning, especially selective retention and recall-aware memory
+- extension stages beyond selective retention, especially recall-aware memory
 
 So the honest state is:
 

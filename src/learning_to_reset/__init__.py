@@ -42,7 +42,11 @@ from learning_to_reset.multi_clean_extension import (
     MultiCleanSegment,
     MultiCleanTrajectory,
     build_multi_clean_trajectory,
+    build_retained_retry_prompt,
+    build_selective_retention_trajectory,
+    extract_retained_notes,
     manage_bounded_clean_cycles,
+    manage_selective_retention_clean_cycles,
 )
 from learning_to_reset.paper_dataset_prep import export_paper_prepared_datasets
 from learning_to_reset.paper_sources import (
@@ -162,6 +166,8 @@ __all__ = [
     "build_clean_trajectory",
     "build_evaluation_comparison",
     "build_multi_clean_trajectory",
+    "build_retained_retry_prompt",
+    "build_selective_retention_trajectory",
     "build_negative_expression",
     "build_negative_trace_record",
     "build_positive_trace_record",
@@ -211,6 +217,7 @@ __all__ = [
     "fetch_paper_source_bundle",
     "fetch_countdown_source_records",
     "fetch_reference_trace_records",
+    "extract_retained_notes",
     "extract_answer_expression",
     "extract_answer_text",
     "load_countdown_samples",
@@ -219,6 +226,7 @@ __all__ = [
     "load_prepared_examples",
     "manage_single_clean_cycle",
     "manage_bounded_clean_cycles",
+    "manage_selective_retention_clean_cycles",
     "normalize_trace",
     "parse_countdown_user_prompt",
     "parse_reasoning_prompt",

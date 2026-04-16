@@ -36,6 +36,7 @@
 - First extension work is already in code:
   - bounded multi-step cleaning
   - per-clean penalty support
+  - explicit selective retention with `<retain>...</retain>` notes carried into retry prompts
 - The latest expanded local run completed:
   - expanded SFT reached `8/8` valid and `1/8` correct on the held-out reset-aware slice
   - raw one-pass decoding stayed `0/8` valid
@@ -57,7 +58,7 @@
 - Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 - Scale the local CPU pilot into a larger target-model run.
 - Run raw-versus-reset-aware comparison on a larger hard Countdown slice.
-- Extend the multi-clean branch toward selective retention and recall-aware memory.
+- Extend the selective-retention branch toward recall-aware memory.
 
 ## Next Plan
 
@@ -65,7 +66,7 @@
 2. Re-run SFT only when the filtered source is expected to beat the current `1/8` held-out correctness result.
 3. Compare the next SFT checkpoint against raw generation, expanded SFT, verifier-grounded SFT, and the RLOO checkpoint.
 4. Run reset-aware RLOO only if the improved SFT checkpoint beats the current held-out correctness gate.
-5. Continue the extension track with selective retention and recall-aware memory after the one-shot baseline is stronger.
+5. Continue the extension track with recall-aware memory after the one-shot baseline is stronger.
 
 ## Latest Signal
 

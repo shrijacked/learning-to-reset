@@ -23,6 +23,10 @@ Current status:
   - a reset budget `k`
   - repeated retry handling
   - a small per-clean penalty for trajectory scoring
+- A selective-retention controller now exists locally with:
+  - explicit `<retain>...</retain>` notes
+  - retry prompts that carry only retained notes, not the full previous scratchpad
+  - the same clean-step penalty accounting as bounded multi-clean
 
 Core changes:
 - Add a reset budget `k > 1`
@@ -36,6 +40,10 @@ Main risk:
 
 Goal:
 - Preserve useful partial progress when resetting
+
+Current status:
+- Explicit retained-note extraction and retry-prompt injection are implemented.
+- Retention is opt-in and tag-based, so ordinary full-reset behavior remains unchanged.
 
 Core changes:
 - Replace full deletion with span-level keep/drop decisions
