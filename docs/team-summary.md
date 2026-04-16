@@ -51,6 +51,10 @@
   - half-epoch SFT used `2770` train examples and `396` validation examples
   - reset-aware evaluation reached `7/8` valid but `0/8` correct
   - raw one-pass decoding remained `0/8` valid and `0/8` correct
+- Hard-slice check completed on the generated `countdown-test-hard.jsonl` subset:
+  - existing 8-example eval set produced `3` hard prompts
+  - raw one-pass decoding scored `0/3` valid and `0/3` correct
+  - reset-aware retry scored `3/3` valid but `0/3` correct
 - A runnable baseline demo is available through:
   - `PYTHONPATH=src python3 -m learning_to_reset`
 
@@ -79,7 +83,7 @@
 - The mixed verifier-grounded checkpoint regressed to `0/8` correct, so adding more recovery-style traces by volume is not enough.
 - The contrastive/all checkpoint also regressed to `7/8` valid and `0/8` correct, so the next bet is trace quality, not trace volume.
 - The small RLOO pass is `7/8` valid and `1/8` correct on the same held-out slice, so it does not beat SFT yet.
-- Current blocker: arithmetic grounding on unseen Countdown prompts, not reset formatting.
+- Current blocker: arithmetic grounding on unseen hard Countdown prompts, not reset formatting.
 
 ## Non-Engineering Leftovers
 

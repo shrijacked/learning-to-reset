@@ -98,6 +98,9 @@ Observed pilot outcome:
 - that verification-only checkpoint scored `0/8` valid and `0/8` correct in raw one-pass decoding, but `8/8` valid, `1/8` correct, `average_score = 0.225`, and `clean_rate = 1.0` with reset-aware retry evaluation
 - an all-style contrastive recovery ablation completed at half an epoch with `2770` train examples, `396` validation examples, `train_loss = 0.1324`, and `eval_loss = 0.0709`
 - that contrastive/all checkpoint scored `0/8` valid and `0/8` correct in raw one-pass decoding, and `7/8` valid, `0/8` correct, `average_score = 0.10`, and `clean_rate = 1.0` with reset-aware retry evaluation
+- a generated hard-slice check from the existing 8-example eval set produced `3` multiplication/division-heavy prompts
+- on that hard slice, expanded SFT raw one-pass decoding scored `0/3` valid and `0/3` correct
+- on that hard slice, expanded SFT reset-aware retry evaluation scored `3/3` valid, `0/3` correct, `average_score = 0.10`, and `clean_rate = 1.0`
 
 Interpretation:
 
@@ -107,6 +110,7 @@ Interpretation:
 - the balanced verifier-grounded ablation ties the expanded SFT checkpoint on held-out correctness and validity, but does not improve beyond it
 - the contrastive/all ablation also regresses below the expanded SFT checkpoint, so the next data step should improve trace quality rather than simply increasing reset-style volume
 - the current pilot is still too weak to claim strong target-model performance
+- the new hard-slice result confirms that reset improves answer format on harder prompts, but has not yet produced target-correct hard arithmetic
 - the main remaining baseline blocker is arithmetic grounding: the model often writes plausible step-by-step claims, but the verifier-computed expression value does not match the target
 - the first extension module remains separate from the baseline path, so future multi-clean work can proceed without destabilizing the one-shot baseline
 - the second extension module now supports explicit retained notes after clean, while still avoiding full scratchpad carryover
