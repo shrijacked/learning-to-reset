@@ -64,11 +64,16 @@
   - hard-focused SFT scored `0/3` valid raw, then `3/3` valid and `0/3` correct with reset-aware retry
   - hard-focused RLOO finished with `final_loss = 0.0` and `best_validation_accuracy = 0.0`
   - hard-focused RLOO also scored `3/3` valid and `0/3` correct with reset-aware retry
+- Failure-mined recovery traces are now available:
+  - `15` solver-verified recovery records mined from the `3` failed hard eval examples
+  - plus-mined artifact set prepared with `1356` SFT train examples and `151` validation examples
+  - these are for the next training cycle, not for reporting on the same mined hard examples
 - A runnable baseline demo is available through:
   - `PYTHONPATH=src python3 -m learning_to_reset`
 
 ## To Do
 
+- Create a fresh hard holdout before training on the plus-mined recovery artifact set.
 - Add or build a stronger Countdown-native expert-trace source with verified target-correct hard recoveries.
 - Re-run SFT and reset-aware RLOO after the trace source creates nonzero correctness reward on hard prompts.
 - Scale the local CPU pilot into a larger target-model run.
@@ -77,8 +82,8 @@
 
 ## Next Plan
 
-1. Build or fetch stronger verified hard Countdown traces.
-2. Train the next SFT checkpoint on those verified traces.
+1. Create a fresh hard holdout that has not been mined into training traces.
+2. Train the next SFT checkpoint on the plus-mined and verified recovery traces.
 3. Run reset-aware RLOO only after sampled hard rollouts produce nonzero correctness reward.
 4. Compare the next checkpoint against raw generation, expanded SFT, verifier-grounded SFT, and the RLOO checkpoints.
 5. Continue the extension track by comparing full reset, selective retention, and memory-aware clean loops after the one-shot baseline is stronger.
@@ -92,6 +97,7 @@
 - The contrastive/all checkpoint also regressed to `7/8` valid and `0/8` correct, so the next bet is trace quality, not trace volume.
 - The small RLOO pass is `7/8` valid and `1/8` correct on the same held-out slice, so it does not beat SFT yet.
 - The hard-focused SFT and hard-focused RLOO runs both reached `3/3` valid but `0/3` correct on the hard slice.
+- Failure mining now gives targeted recovery data, but the next metric needs a fresh hard holdout to avoid leakage.
 - Current blocker: arithmetic grounding on unseen hard Countdown prompts, not reset formatting.
 
 ## Non-Engineering Leftovers

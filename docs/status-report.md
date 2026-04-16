@@ -26,6 +26,7 @@ Implemented and verified:
 - multi-solution synthetic Countdown supervision and step-by-step arithmetic walkthrough traces
 - verifier-grounded and contrastive synthetic recovery responses that explicitly state checked expression values
 - hard-focused synthetic Countdown source generation for multiplication/division-heavy prompts
+- failure-mined recovery trace generation from failed hard eval outputs
 - automatic resolution of nested `best-checkpoint` and `final-checkpoint` model outputs
 - a first bounded multi-step cleaning extension with clean-budget and clean-penalty support
 - a selective-retention extension that carries explicit retained notes into retry prompts after clean
@@ -61,6 +62,7 @@ What works today:
 - the repo can prepare paper-aligned artifacts from those real source files
 - the repo can synthesize Countdown-aligned fallback traces locally when a stronger trace source is unavailable
 - the repo can force synthetic Countdown source generation onto hard multiplication/division-heavy prompts
+- the repo can mine failed hard eval outputs into solver-verified recovery traces for the next SFT cycle
 - the synthetic trace generator can emit walkthrough, verifier-grounded, and contrastive recovery styles for the same solved prompt
 - raw one-pass and reset-aware evaluation summaries can be compared with a repeatable CLI utility
 - the target Qwen model can complete local SFT checkpoints and reset-aware RL checkpoints on pilot subsets
@@ -110,6 +112,8 @@ Observed pilot outcome:
 - hard-focused reset-aware RLOO completed on top of that SFT checkpoint with 3 steps, 4 prompts per step, 4 responses per prompt, and `max_new_tokens = 128`
 - hard-focused RLOO produced `final_loss = 0.0`, `best_validation_accuracy = 0.0`, and `best_validation_average_score = 0.10`, which means the sampled rollouts produced no positive correctness advantage
 - the hard-focused RLOO checkpoint scored `0/3` valid and `0/3` correct in raw one-pass decoding, then `3/3` valid and `0/3` correct with reset-aware retry
+- failure mining over the hard-focused SFT eval output produced `15` solver-verified recovery records from the `3` failed hard examples
+- a combined plus-mined local artifact set prepared successfully with `1356` SFT train examples and `151` validation examples
 
 Interpretation:
 
@@ -121,6 +125,7 @@ Interpretation:
 - the current pilot is still too weak to claim strong target-model performance
 - the hard-focused SFT and RLOO results confirm that reset improves answer format on harder prompts, but has not yet produced target-correct hard arithmetic
 - the hard-focused RLOO loss stayed at zero because the policy saw no correctness-reward variation on those sampled hard prompts
+- the mined recovery records are useful for the next training cycle, but they must be evaluated against a fresh hard holdout because they were derived from the current hard failures
 - the main remaining baseline blocker is arithmetic grounding: the model often writes plausible step-by-step claims, but the verifier-computed expression value does not match the target
 - the first extension module remains separate from the baseline path, so future multi-clean work can proceed without destabilizing the one-shot baseline
 - the second extension module now supports explicit retained notes after clean, while still avoiding full scratchpad carryover
@@ -128,11 +133,12 @@ Interpretation:
 
 ## Remaining Engineering Work
 
-1. Add a stronger Countdown-native expert-trace source with verified target-correct hard recoveries.
-2. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
-3. Re-run SFT and reset-aware RLOO after the trace source can produce positive correctness rewards on hard prompts.
-4. Run a larger raw-versus-reset-aware comparison using a broader hard Countdown slice.
-5. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
+1. Train on the plus-mined recovery artifact set only after creating a fresh hard holdout for honest evaluation.
+2. Add or fetch a stronger Countdown-native expert-trace source with verified target-correct hard recoveries.
+3. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
+4. Re-run SFT and reset-aware RLOO after the trace source can produce positive correctness rewards on hard prompts.
+5. Run a larger raw-versus-reset-aware comparison using a broader hard Countdown slice.
+6. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
 
 ## Remaining Non-Engineering Work
 

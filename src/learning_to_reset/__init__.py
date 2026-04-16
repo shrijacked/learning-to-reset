@@ -49,6 +49,10 @@ from learning_to_reset.extension_comparison import (
     render_extension_comparison_markdown,
     write_extension_comparison_outputs,
 )
+from learning_to_reset.failure_recovery_traces import (
+    build_failure_recovery_trace_records,
+    generate_failure_recovery_trace_corpus,
+)
 from learning_to_reset.model_resolver import default_hf_cache_root, resolve_model_name_or_path
 from learning_to_reset.memory_extension import (
     ManagedMemoryCleanGeneration,
@@ -195,6 +199,7 @@ __all__ = [
     "build_bootstrap_trace_corpus",
     "build_clean_trajectory",
     "build_evaluation_comparison",
+    "build_failure_recovery_trace_records",
     "build_multi_clean_trajectory",
     "build_memory_clean_trajectory",
     "build_retained_retry_prompt",
@@ -213,6 +218,7 @@ __all__ = [
     "export_paper_prepared_datasets",
     "extract_behavior_question",
     "generate_countdown_responses",
+    "generate_failure_recovery_trace_corpus",
     "generate_trace_records",
     "ManagedGeneration",
     "ModifiedRLOOResult",

@@ -55,6 +55,7 @@ flowchart LR
 | R12 | Filter retry-stage recovery examples by verifier correctness | `main.pdf` Section 4 | `pipeline.py`, `prepare_paper_artifacts.py` | `tests/test_pipeline.py`, `tests/test_paper_dataset_prep.py` |
 | R13 | Export a deterministic hard Countdown eval slice | `main.pdf` Section 4.3.1 | `countdown_slices.py`, `paper_dataset_prep.py` | `tests/test_countdown_slices.py`, `tests/test_paper_dataset_prep.py` |
 | R14 | Generate hard-focused Countdown source prompts | `main.pdf` Section 4.3.1 | `synthetic_countdown_dataset.py` | `tests/test_synthetic_countdown_dataset.py` |
+| R15 | Mine failed hard evals into verified recovery traces | `main.pdf` Section 3.2.2, Section 4.3.1 | `failure_recovery_traces.py` | `tests/test_failure_recovery_traces.py` |
 | E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | `memory_extension.py` | `tests/test_memory_extension.py` |
@@ -76,6 +77,7 @@ flowchart LR
 - Paper-aligned artifact preparation now emits `countdown-test-hard.jsonl` for multiplication/division-heavy evaluation
 - Hard-focused synthetic Countdown source generation can now create multiplication/division-heavy training prompts
 - Hard-focused SFT and reset-aware RLOO have both run locally, but neither produced target-correct answers on the held-out hard slice
+- Failed hard evals can now be mined into solver-verified recovery traces for the next training cycle
 - Remaining baseline work is stronger arithmetic grounding, larger target-model execution, and broader experiment comparison
 
 ### Extension

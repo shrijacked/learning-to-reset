@@ -13,6 +13,7 @@ The repository currently covers three core software primitives:
 - Multi-solution synthetic supervision and arithmetic walkthrough trace generation
 - Verifier-grounded and contrastive synthetic recovery responses for arithmetic-consistency supervision
 - Hard-focused synthetic Countdown sample generation for multiplication/division-heavy training data
+- Failure-mined recovery trace generation from failed hard eval outputs
 - A bounded multi-clean extension with a reset budget and per-clean penalty
 - A selective-retention extension that carries explicit `<retain>...</retain>` notes across clean resets
 - A recall-aware memory extension with explicit `<memory>...</memory>` writes, deterministic recall, and a memory-aware clean loop
@@ -110,6 +111,19 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.synthetic_countdown_trace
   --solutions-per-sample 4 \
   --recovery-style all
 ```
+
+Mine failed hard eval outputs into solver-verified recovery traces for the next training cycle:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.failure_recovery_traces \
+  --prepared-countdown output/prepared/countdown-test-hard.jsonl \
+  --eval-results output/eval/countdown-hard/results.jsonl \
+  --output-path output/traces/mined-hard-recoveries.jsonl \
+  --max-solutions-per-failure 3 \
+  --recovery-style all
+```
+
+Use mined traces as training data only with a fresh held-out comparison slice; do not report metrics on the same examples that were mined into recovery supervision.
 
 Run SFT on prepared artifacts:
 

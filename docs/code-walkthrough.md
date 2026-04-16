@@ -35,6 +35,8 @@ The repository now includes a local baseline runtime over prepared artifacts. In
 - `src/learning_to_reset/synthetic_countdown_dataset.py`
   - generates additional solvable Countdown prompts
   - can force hard multiplication/division-heavy samples for stronger arithmetic grounding runs
+- `src/learning_to_reset/failure_recovery_traces.py`
+  - mines failed eval outputs into solver-verified recovery traces for the next training cycle
 - `src/learning_to_reset/rloo.py`
   - implements the reward math for reset-aware RLOO
 - `src/learning_to_reset/rollout_runtime.py`
@@ -234,6 +236,23 @@ Why they matter:
 
 - this is where the repository stops being only a mechanics demo and becomes a runnable baseline
 - these entrypoints are what you would use to produce the first actual baseline runs
+
+### `failure_recovery_traces.py`
+
+This file turns hard eval failures into verified recovery supervision.
+
+- `build_failure_recovery_trace_records(...)`
+  - matches failed eval rows back to prepared Countdown metadata
+  - solves the Countdown prompt with the deterministic solver
+  - writes negative trace records with target-correct recovery responses
+- `generate_failure_recovery_trace_corpus(...)`
+  - reads prepared Countdown JSONL plus eval `results.jsonl`
+  - writes mined recovery JSONL and a summary file
+
+Why it matters:
+
+- it gives the next SFT cycle targeted examples for the exact failure mode currently blocking progress
+- it must be paired with a fresh held-out slice, because mined eval examples are no longer clean benchmark examples
 
 ### `multi_clean_extension.py`
 
