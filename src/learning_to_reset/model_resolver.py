@@ -53,5 +53,8 @@ def resolve_model_name_or_path(
     if not snapshots:
         return model_name_or_path
 
-    snapshots.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    snapshots.sort(
+        key=lambda path: (path.stat().st_mtime_ns, path.stat().st_ctime_ns, path.name),
+        reverse=True,
+    )
     return str(snapshots[0])

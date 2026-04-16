@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import os
 from pathlib import Path
 
 from learning_to_reset.model_resolver import resolve_model_name_or_path
@@ -47,6 +48,25 @@ class ModelResolverTests(unittest.TestCase):
             newer.mkdir(parents=True)
             older.touch()
             newer.touch()
+
+            resolved = resolve_model_name_or_path(
+                "Qwen/Qwen2.5-0.5B",
+                cache_root=cache_root,
+                prefer_local_cache=True,
+            )
+
+        self.assertEqual(Path(resolved), newer)
+
+    def test_cached_snapshot_tie_break_is_deterministic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cache_root = Path(tmp_dir)
+            older = cache_root / "models--Qwen--Qwen2.5-0.5B" / "snapshots" / "old"
+            newer = cache_root / "models--Qwen--Qwen2.5-0.5B" / "snapshots" / "new"
+            older.mkdir(parents=True)
+            newer.mkdir(parents=True)
+            tied_time = 1_700_000_000
+            os.utime(older, (tied_time, tied_time))
+            os.utime(newer, (tied_time, tied_time))
 
             resolved = resolve_model_name_or_path(
                 "Qwen/Qwen2.5-0.5B",
