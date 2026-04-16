@@ -14,6 +14,7 @@ The repository currently covers three core software primitives:
 - Verifier-grounded and contrastive synthetic recovery responses for arithmetic-consistency supervision
 - A bounded multi-clean extension with a reset budget and per-clean penalty
 - A selective-retention extension that carries explicit `<retain>...</retain>` notes across clean resets
+- A recall-aware memory extension with explicit `<memory>...</memory>` writes and deterministic recall
 - Dataset loaders and prompt builders for trace and Countdown-style records
 - Deterministic split and batching helpers for future training/evaluation loops
 - JSONL artifact export and CLI preparation command for trainer-ready splits
@@ -154,4 +155,4 @@ tests/                     Regression tests for the current behavior
 2. Add or acquire a stronger Countdown-native expert-trace source if strict recovery filtering still does not improve correctness.
 3. Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 4. Scale from local CPU pilots to a larger target-model train/eval run.
-5. Extend the selective-retention path toward recall-aware memory.
+5. Connect the recall-aware memory extension to larger train/eval experiments.

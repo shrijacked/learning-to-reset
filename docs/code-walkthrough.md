@@ -47,6 +47,8 @@ The repository now includes a local baseline runtime over prepared artifacts. In
 - `src/learning_to_reset/multi_clean_extension.py`
   - implements the bounded multi-clean extension path with a reset budget and per-clean penalty
   - implements selective retention through explicit `<retain>...</retain>` notes carried into retry prompts
+- `src/learning_to_reset/memory_extension.py`
+  - implements explicit memory writes and deterministic recall prompt augmentation
 - `src/learning_to_reset/demo.py`
   - gives a deterministic walkthrough of the current mechanics
 - `tests/`
@@ -230,6 +232,27 @@ Why it matters:
 - it lets the project study whether extra resets help or whether the model starts using reset too aggressively
 - it gives the project a middle ground between full deletion and unsafe full scratchpad retention
 
+### `memory_extension.py`
+
+This file contains the recall-aware memory extension.
+
+Important pieces:
+
+- `MemoryEntry`
+  - stores one memory item with optional tags and source ID
+- `extract_memory_writes(...)`
+  - reads explicit `<memory>...</memory>` blocks from model responses
+- `RecallMemoryStore`
+  - writes entries into a lightweight in-memory store
+  - recalls entries by deterministic token overlap with a new query
+- `build_recall_prompt(...)`
+  - appends recalled entries to a retry prompt
+
+Why it matters:
+
+- it gives the project a concrete memory-aware extension without hiding state inside the model
+- it makes memory use inspectable, testable, and separable from the one-shot baseline
+
 ### `demo.py`
 
 This file is a runnable summary of the baseline.
@@ -319,7 +342,7 @@ The repository does not yet include:
 - a strong expert-trace source with both productive and unproductive tagged Countdown traces
 - a larger target-model run with enough data and compute to produce nontrivial Countdown accuracy
 - a scaled raw-versus-reset-aware table on a larger hard Countdown slice
-- extension stages beyond selective retention, especially recall-aware memory
+- scaled experiments that compare full reset, selective retention, and recall-aware memory
 
 So the honest state is:
 

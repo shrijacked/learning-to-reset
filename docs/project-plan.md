@@ -55,7 +55,7 @@ flowchart LR
 | R12 | Filter retry-stage recovery examples by verifier correctness | `main.pdf` Section 4 | `pipeline.py`, `prepare_paper_artifacts.py` | `tests/test_pipeline.py`, `tests/test_paper_dataset_prep.py` |
 | E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
-| E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | future module | future tests |
+| E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | `memory_extension.py` | `tests/test_memory_extension.py` |
 
 ## Current Boundary
 
@@ -78,7 +78,7 @@ flowchart LR
 - Selective retention support exists through explicit `<retain>...</retain>` notes carried into retry prompts
 - Reward shaping that penalizes excessive resets
 - Selective deletion or summarization instead of full deletion
-- External memory recall or retrieval
+- External memory recall exists through explicit `<memory>...</memory>` writes and deterministic token-overlap retrieval
 
 ## Verification Rule
 

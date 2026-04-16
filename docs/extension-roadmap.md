@@ -27,6 +27,10 @@ Current status:
   - explicit `<retain>...</retain>` notes
   - retry prompts that carry only retained notes, not the full previous scratchpad
   - the same clean-step penalty accounting as bounded multi-clean
+- A recall-aware memory module now exists locally with:
+  - explicit `<memory>...</memory>` writes
+  - deterministic token-overlap recall
+  - prompt augmentation for recalled entries
 
 Core changes:
 - Add a reset budget `k > 1`
@@ -58,6 +62,10 @@ Main risk:
 Goal:
 - Move from a one-token reset mechanism toward a finite context machine with simple memory operations
 
+Current status:
+- A lightweight memory store exists for explicit writes and deterministic recall.
+- Recall prompt construction is implemented separately from the baseline clean path.
+
 Core changes:
 - Introduce explicit write and recall actions
 - Store reset reasoning in a lightweight external memory
@@ -80,4 +88,4 @@ flowchart TD
 - The baseline matches the intended qualitative behavior and core reward logic.
 - Extensions improve hard-example performance without collapsing into excessive resets.
 - The agent becomes more selective over time, not merely more active.
-- Phase 2 is only partially complete until the bounded multi-clean path is connected to stronger training and evaluation runs.
+- The extension code path is in place; the next extension milestone is comparative train/eval across full reset, selective retention, and recall-aware memory.

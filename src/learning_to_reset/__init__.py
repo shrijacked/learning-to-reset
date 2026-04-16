@@ -37,6 +37,12 @@ from learning_to_reset.eval_runtime import (
     write_evaluation_outputs,
 )
 from learning_to_reset.model_resolver import default_hf_cache_root, resolve_model_name_or_path
+from learning_to_reset.memory_extension import (
+    MemoryEntry,
+    RecallMemoryStore,
+    build_recall_prompt,
+    extract_memory_writes,
+)
 from learning_to_reset.multi_clean_extension import (
     ManagedMultiCleanGeneration,
     MultiCleanSegment,
@@ -155,6 +161,7 @@ __all__ = [
     "DatasetSplit",
     "DemoSnapshot",
     "ManagedMultiCleanGeneration",
+    "MemoryEntry",
     "MultiCleanSegment",
     "MultiCleanTrajectory",
     "VerificationResult",
@@ -190,6 +197,7 @@ __all__ = [
     "PromptCollator",
     "PromptExample",
     "ReasoningPromptParts",
+    "RecallMemoryStore",
     "RolloutCandidate",
     "RolloutSegment",
     "TraceRecord",
@@ -203,6 +211,7 @@ __all__ = [
     "build_demo_report",
     "build_demo_snapshot",
     "build_policy_trajectory_sample",
+    "build_recall_prompt",
     "build_reasoning_prompt",
     "build_rollout_candidate",
     "build_sft_training_example",
@@ -217,6 +226,7 @@ __all__ = [
     "fetch_paper_source_bundle",
     "fetch_countdown_source_records",
     "fetch_reference_trace_records",
+    "extract_memory_writes",
     "extract_retained_notes",
     "extract_answer_expression",
     "extract_answer_text",
