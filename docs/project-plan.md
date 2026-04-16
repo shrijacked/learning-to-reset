@@ -75,6 +75,7 @@ flowchart LR
 - Retry-stage recovery examples can now be filtered by verifier correctness before SFT artifact export
 - Paper-aligned artifact preparation now emits `countdown-test-hard.jsonl` for multiplication/division-heavy evaluation
 - Hard-focused synthetic Countdown source generation can now create multiplication/division-heavy training prompts
+- Hard-focused SFT and reset-aware RLOO have both run locally, but neither produced target-correct answers on the held-out hard slice
 - Remaining baseline work is stronger arithmetic grounding, larger target-model execution, and broader experiment comparison
 
 ### Extension

@@ -8,7 +8,7 @@ This repository currently implements the baseline mechanics for a reset-aware re
 2. let the model emit a special `<clean>` token when its reasoning path becomes unproductive
 3. treat the final interaction outcome as the reward signal, whether the answer comes from the first try or from a retry after reset
 
-The repository now includes a local baseline runtime over prepared artifacts. In practice that means the repo can prepare data, run SFT, run a reset-aware RLOO loop, and evaluate with the one-shot clean retry path. The first local target-model pilots, verifier-grounded recovery ablations, and contrastive/all recovery ablation have completed; the strongest current signal is that reset-aware evaluation makes post-clean answers mostly well-formed, while target-correct arithmetic remains the main blocker.
+The repository now includes a local baseline runtime over prepared artifacts. In practice that means the repo can prepare data, run SFT, run a reset-aware RLOO loop, and evaluate with the one-shot clean retry path. The first local target-model pilots, verifier-grounded recovery ablations, contrastive/all recovery ablation, and hard-focused SFT/RLOO pass have completed; the strongest current signal is that reset-aware evaluation makes post-clean answers mostly well-formed, while target-correct arithmetic remains the main blocker.
 
 ## Repo Map
 

@@ -56,38 +56,42 @@
   - existing 8-example eval set produced `3` hard prompts
   - raw one-pass decoding scored `0/3` valid and `0/3` correct
   - reset-aware retry scored `3/3` valid but `0/3` correct
-- Next hard-focused artifact set is prepared locally:
+- Hard-focused artifact set and training run completed locally:
   - `64` generated hard Countdown prompts
   - `844` solver-backed hard traces
   - `1329` SFT train examples and `148` validation examples
+  - hard-focused SFT finished with `train_loss = 0.0750` and `eval_loss = 0.0963`
+  - hard-focused SFT scored `0/3` valid raw, then `3/3` valid and `0/3` correct with reset-aware retry
+  - hard-focused RLOO finished with `final_loss = 0.0` and `best_validation_accuracy = 0.0`
+  - hard-focused RLOO also scored `3/3` valid and `0/3` correct with reset-aware retry
 - A runnable baseline demo is available through:
   - `PYTHONPATH=src python3 -m learning_to_reset`
 
 ## To Do
 
-- Run SFT on the prepared hard-focused artifact set.
-- Add or build a stronger Countdown-native expert-trace source if hard-focused synthetic training still does not improve arithmetic correctness.
-- Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
+- Add or build a stronger Countdown-native expert-trace source with verified target-correct hard recoveries.
+- Re-run SFT and reset-aware RLOO after the trace source creates nonzero correctness reward on hard prompts.
 - Scale the local CPU pilot into a larger target-model run.
-- Run raw-versus-reset-aware comparison on the generated hard Countdown slice.
+- Run raw-versus-reset-aware comparison on a larger hard Countdown slice.
 - Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
 
 ## Next Plan
 
-1. Run SFT on `tmp/paper-artifacts-hard-focus-64-all`.
-2. Compare the hard-focused SFT checkpoint against raw generation and reset-aware retry on `countdown-test-hard.jsonl`.
-3. Compare the next SFT checkpoint against raw generation, expanded SFT, verifier-grounded SFT, and the RLOO checkpoint.
-4. Run reset-aware RLOO only if the improved SFT checkpoint beats the current held-out correctness gate.
+1. Build or fetch stronger verified hard Countdown traces.
+2. Train the next SFT checkpoint on those verified traces.
+3. Run reset-aware RLOO only after sampled hard rollouts produce nonzero correctness reward.
+4. Compare the next checkpoint against raw generation, expanded SFT, verifier-grounded SFT, and the RLOO checkpoints.
 5. Continue the extension track by comparing full reset, selective retention, and memory-aware clean loops after the one-shot baseline is stronger.
 
 ## Latest Signal
 
-- Raw one-pass generation is still `0/8` valid on the held-out hard slice.
+- Raw one-pass generation is still `0/3` valid on the held-out hard slice.
 - The best expanded SFT checkpoint is `8/8` valid, `1/8` correct, with `clean_rate = 1.0` under reset-aware evaluation.
 - The balanced verifier-grounded checkpoint ties that best SFT result and also keeps `8/8` validity.
 - The mixed verifier-grounded checkpoint regressed to `0/8` correct, so adding more recovery-style traces by volume is not enough.
 - The contrastive/all checkpoint also regressed to `7/8` valid and `0/8` correct, so the next bet is trace quality, not trace volume.
 - The small RLOO pass is `7/8` valid and `1/8` correct on the same held-out slice, so it does not beat SFT yet.
+- The hard-focused SFT and hard-focused RLOO runs both reached `3/3` valid but `0/3` correct on the hard slice.
 - Current blocker: arithmetic grounding on unseen hard Countdown prompts, not reset formatting.
 
 ## Non-Engineering Leftovers

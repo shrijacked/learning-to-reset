@@ -104,6 +104,12 @@ Observed pilot outcome:
 - on that hard slice, expanded SFT raw one-pass decoding scored `0/3` valid and `0/3` correct
 - on that hard slice, expanded SFT reset-aware retry evaluation scored `3/3` valid, `0/3` correct, `average_score = 0.10`, and `clean_rate = 1.0`
 - the next hard-focused local source build generated `64` hard Countdown prompts, `844` all-style solver-backed traces, and prepared `1329` SFT train examples plus `148` validation examples
+- hard-focused SFT completed on that artifact set with `train_loss = 0.0750` and `eval_loss = 0.0963`
+- hard-focused SFT raw one-pass decoding scored `0/3` valid and `0/3` correct on `countdown-test-hard.jsonl`
+- hard-focused SFT reset-aware retry scored `3/3` valid, `0/3` correct, `average_score = 0.10`, and `clean_rate = 1.0`
+- hard-focused reset-aware RLOO completed on top of that SFT checkpoint with 3 steps, 4 prompts per step, 4 responses per prompt, and `max_new_tokens = 128`
+- hard-focused RLOO produced `final_loss = 0.0`, `best_validation_accuracy = 0.0`, and `best_validation_average_score = 0.10`, which means the sampled rollouts produced no positive correctness advantage
+- the hard-focused RLOO checkpoint scored `0/3` valid and `0/3` correct in raw one-pass decoding, then `3/3` valid and `0/3` correct with reset-aware retry
 
 Interpretation:
 
@@ -113,7 +119,8 @@ Interpretation:
 - the balanced verifier-grounded ablation ties the expanded SFT checkpoint on held-out correctness and validity, but does not improve beyond it
 - the contrastive/all ablation also regresses below the expanded SFT checkpoint, so the next data step should improve trace quality rather than simply increasing reset-style volume
 - the current pilot is still too weak to claim strong target-model performance
-- the new hard-slice result confirms that reset improves answer format on harder prompts, but has not yet produced target-correct hard arithmetic
+- the hard-focused SFT and RLOO results confirm that reset improves answer format on harder prompts, but has not yet produced target-correct hard arithmetic
+- the hard-focused RLOO loss stayed at zero because the policy saw no correctness-reward variation on those sampled hard prompts
 - the main remaining baseline blocker is arithmetic grounding: the model often writes plausible step-by-step claims, but the verifier-computed expression value does not match the target
 - the first extension module remains separate from the baseline path, so future multi-clean work can proceed without destabilizing the one-shot baseline
 - the second extension module now supports explicit retained notes after clean, while still avoiding full scratchpad carryover
@@ -121,12 +128,11 @@ Interpretation:
 
 ## Remaining Engineering Work
 
-1. Run SFT on the hard-focused `tmp/paper-artifacts-hard-focus-64-all` artifact set.
-2. Add a stronger Countdown-native expert-trace source if hard-focused synthetic training still does not improve arithmetic grounding beyond the current `1/8` held-out result.
-3. Re-run reset-aware RLOO only after the SFT checkpoint produces stronger target-correct retries.
-4. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
-5. Run a larger raw-versus-reset-aware comparison using the generated `countdown-test-hard.jsonl` artifact.
-6. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
+1. Add a stronger Countdown-native expert-trace source with verified target-correct hard recoveries.
+2. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
+3. Re-run SFT and reset-aware RLOO after the trace source can produce positive correctness rewards on hard prompts.
+4. Run a larger raw-versus-reset-aware comparison using a broader hard Countdown slice.
+5. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
 
 ## Remaining Non-Engineering Work
 
