@@ -74,10 +74,13 @@ class PreparePaperCliTests(unittest.TestCase):
                 )
 
             manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
+            hard_eval_exists = (output_dir / "countdown-test-hard.jsonl").exists()
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(manifest["countdown"]["test"], 1)
+        self.assertEqual(manifest["countdown"]["test_hard"], 1)
         self.assertIn('"sft"', buffer.getvalue())
+        self.assertTrue(hard_eval_exists)
 
 
 if __name__ == "__main__":

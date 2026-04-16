@@ -88,6 +88,7 @@ Current target:
 - Countdown dataset
 - SFT followed by RLOO
 - Separate attention to hard problems involving multiplication/division
+- Prepared artifacts now include `countdown-test-hard.jsonl` so the hard-slice comparison can be regenerated directly
 
 ## Extension Priorities
 

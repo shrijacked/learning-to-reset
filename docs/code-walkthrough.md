@@ -27,6 +27,8 @@ The repository now includes a local baseline runtime over prepared artifacts. In
   - handles the one-shot reset flow
 - `src/learning_to_reset/countdown_verifier.py`
   - checks expression legality and whether a response hits the target
+- `src/learning_to_reset/countdown_slices.py`
+  - filters deterministic hard Countdown eval subsets for multiplication/division-heavy comparisons
 - `src/learning_to_reset/synthetic_countdown_traces.py`
   - builds solver-backed Countdown trace records for local fallback training
   - supports walkthrough, verifier-grounded, and contrastive recovery responses after reset
@@ -155,6 +157,8 @@ Important pieces:
   - can require those recovery responses to verify against Countdown numbers and target
 - `export_prepared_datasets(...)`
   - writes split JSONL files plus a manifest for later runtimes
+- paper-aligned artifact preparation also writes `countdown-test-hard.jsonl`
+  - this supports the Section 4 hard-problem comparison without manual filtering
 
 Why they matter:
 
@@ -178,6 +182,24 @@ Why it matters:
 
 - this is the ground-truth scoring layer used by evaluation and the RL runtime
 - it separates reasoning generation from arithmetic correctness checking
+
+### `countdown_slices.py`
+
+This file creates deterministic evaluation subsets for paper-style comparisons.
+
+Important pieces:
+
+- `can_reach_with_add_sub_only(...)`
+  - checks whether a target can be solved without multiplication or division
+- `is_hard_countdown_sample(...)`
+  - marks samples as hard when they require multiplication/division or upstream metadata says they are hard
+- `filter_hard_countdown_samples(...)`
+  - preserves source order while extracting the hard eval subset
+
+Why it matters:
+
+- the paper reports the strongest gains on harder multiplication/division examples
+- this module makes that comparison repeatable instead of relying on one-off local filtering
 
 ### `rollout_runtime.py`, `sft_runtime.py`, `eval_runtime.py`, and `rloo_runtime.py`
 

@@ -90,6 +90,80 @@ class PaperDatasetPrepTests(unittest.TestCase):
         self.assertEqual(manifest["countdown"]["test"], 1)
         self.assertEqual(len(test_payload), 1)
         self.assertIn('"source_id": "c3"', test_payload[0])
+        self.assertEqual(manifest["countdown"]["test_hard"], 0)
+
+    def test_export_paper_prepared_datasets_writes_hard_eval_slice(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            traces = root / "traces.jsonl"
+            countdown_train = root / "countdown-train.jsonl"
+            countdown_eval = root / "countdown-eval.jsonl"
+            output_dir = root / "prepared"
+
+            traces.write_text(
+                json.dumps(
+                    {
+                        "source_id": "t1",
+                        "problem": "Reach 10.",
+                        "raw_trace": "<think>Valid.</think><answer>10</answer>",
+                        "is_correct": True,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            countdown_train.write_text(
+                json.dumps(
+                    {
+                        "source_id": "train",
+                        "numbers": [1, 2],
+                        "target": 3,
+                        "question": "Reach 3 using 1, 2.",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            countdown_eval.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "source_id": "easy",
+                                "numbers": [20, 5, 99],
+                                "target": 25,
+                                "question": "Reach 25 using 20, 5, 99.",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "source_id": "hard",
+                                "numbers": [6, 7],
+                                "target": 42,
+                                "question": "Reach 42 using 6, 7.",
+                            }
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            manifest = export_paper_prepared_datasets(
+                trace_path=traces,
+                countdown_train_path=countdown_train,
+                countdown_eval_path=countdown_eval,
+                output_dir=output_dir,
+                sft_val_ratio=0.0,
+                countdown_val_ratio=0.0,
+                allow_clean=True,
+            )
+            hard_payload = (output_dir / "countdown-test-hard.jsonl").read_text(encoding="utf-8").splitlines()
+
+        self.assertEqual(manifest["countdown"]["test"], 2)
+        self.assertEqual(manifest["countdown"]["test_hard"], 1)
+        self.assertEqual(len(hard_payload), 1)
+        self.assertIn('"source_id": "hard"', hard_payload[0])
 
     def test_export_paper_prepared_datasets_can_include_retry_recovery_examples(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

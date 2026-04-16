@@ -53,6 +53,7 @@ flowchart LR
 | R10 | Add contrastive recovery trace generation | `main.pdf` Section 3.2.1, Section 4 | `synthetic_countdown_traces.py` | `tests/test_synthetic_countdown_traces.py` |
 | R11 | Gate trace-source ablations by held-out Countdown correctness | `main.pdf` Section 4 | local run artifacts | reset-aware and raw eval summaries |
 | R12 | Filter retry-stage recovery examples by verifier correctness | `main.pdf` Section 4 | `pipeline.py`, `prepare_paper_artifacts.py` | `tests/test_pipeline.py`, `tests/test_paper_dataset_prep.py` |
+| R13 | Export a deterministic hard Countdown eval slice | `main.pdf` Section 4.3.1 | `countdown_slices.py`, `paper_dataset_prep.py` | `tests/test_countdown_slices.py`, `tests/test_paper_dataset_prep.py` |
 | E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | `memory_extension.py` | `tests/test_memory_extension.py` |
@@ -71,6 +72,7 @@ flowchart LR
 - Verifier-grounded recovery ablations have run, but they currently tie rather than beat the best expanded SFT result
 - Contrastive/all recovery ablation has run, but it regresses below the best expanded SFT result
 - Retry-stage recovery examples can now be filtered by verifier correctness before SFT artifact export
+- Paper-aligned artifact preparation now emits `countdown-test-hard.jsonl` for multiplication/division-heavy evaluation
 - Remaining baseline work is stronger arithmetic grounding, larger target-model execution, and broader experiment comparison
 
 ### Extension

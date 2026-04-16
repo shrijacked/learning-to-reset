@@ -27,6 +27,7 @@
   - upstream train/eval fetch and flattening
   - reference trace fetch plus paired trace bootstrap
   - paper-aligned artifact preparation from separate train/eval files
+  - automatic `countdown-test-hard.jsonl` export for multiplication/division-heavy evals
   - a tiny live fetch -> bootstrap -> prep smoke run
 - Trainer outputs can now be evaluated directly from the run root because nested checkpoints resolve automatically.
 - Fallback SFT prep can now:
@@ -59,7 +60,7 @@
 - Add or build a stronger Countdown-native expert-trace source if strict recovery filtering still does not improve arithmetic correctness.
 - Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 - Scale the local CPU pilot into a larger target-model run.
-- Run raw-versus-reset-aware comparison on a larger hard Countdown slice.
+- Run raw-versus-reset-aware comparison on the generated hard Countdown slice.
 - Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
 
 ## Next Plan

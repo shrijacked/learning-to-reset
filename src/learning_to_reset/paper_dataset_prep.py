@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
+from learning_to_reset.countdown_slices import filter_hard_countdown_samples
 from learning_to_reset.data import load_countdown_samples, load_trace_records
 from learning_to_reset.dataset_prep import write_prompt_examples_jsonl
 from learning_to_reset.pipeline import prepare_countdown_examples, prepare_sft_examples
@@ -50,8 +51,13 @@ def export_paper_prepared_datasets(
         load_countdown_samples(countdown_train_path),
         allow_clean=allow_clean,
     )
+    countdown_eval_samples = load_countdown_samples(countdown_eval_path)
     countdown_eval_examples = prepare_countdown_examples(
-        load_countdown_samples(countdown_eval_path),
+        countdown_eval_samples,
+        allow_clean=allow_clean,
+    )
+    countdown_hard_eval_examples = prepare_countdown_examples(
+        filter_hard_countdown_samples(countdown_eval_samples),
         allow_clean=allow_clean,
     )
     countdown_train, countdown_validation = _train_validation_split(
@@ -64,6 +70,7 @@ def export_paper_prepared_datasets(
     write_prompt_examples_jsonl(countdown_train, output_root / "countdown-train.jsonl")
     write_prompt_examples_jsonl(countdown_validation, output_root / "countdown-validation.jsonl")
     write_prompt_examples_jsonl(countdown_eval_examples, output_root / "countdown-test.jsonl")
+    write_prompt_examples_jsonl(countdown_hard_eval_examples, output_root / "countdown-test-hard.jsonl")
 
     manifest = {
         "sft": {
@@ -74,6 +81,7 @@ def export_paper_prepared_datasets(
             "train": len(countdown_train),
             "validation": len(countdown_validation),
             "test": len(countdown_eval_examples),
+            "test_hard": len(countdown_hard_eval_examples),
         },
         "allow_clean": allow_clean,
         "include_recovery_examples": include_recovery_examples,

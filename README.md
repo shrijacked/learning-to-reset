@@ -20,6 +20,7 @@ The repository currently covers three core software primitives:
 - Deterministic split and batching helpers for future training/evaluation loops
 - JSONL artifact export and CLI preparation command for trainer-ready splits
 - Countdown answer verification for evaluating generated expressions
+- A deterministic hard Countdown eval slice for multiplication/division-heavy comparisons
 - SFT runtime for prepared supervised traces
 - Clean-aware reward and trajectory assembly for Countdown rollouts
 - Reset-aware RLOO runtime with local metrics and checkpointing
@@ -91,6 +92,8 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.prepare_paper_artifacts \
   --require-recovery-target-correct
 ```
 
+This writes both `countdown-test.jsonl` and `countdown-test-hard.jsonl`; the hard slice keeps examples that require multiplication or division under the deterministic Countdown solver.
+
 Generate a Countdown-aligned fallback trace set directly from local Countdown prompts:
 
 ```bash
@@ -158,4 +161,5 @@ tests/                     Regression tests for the current behavior
 2. Add or acquire a stronger Countdown-native expert-trace source if strict recovery filtering still does not improve correctness.
 3. Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 4. Scale from local CPU pilots to a larger target-model train/eval run.
-5. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
+5. Run raw-versus-reset-aware comparison on `countdown-test-hard.jsonl`.
+6. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.

@@ -33,6 +33,7 @@ Implemented and verified:
 - retry-stage recovery augmentation for fallback SFT preparation
 - a recovery-balance control for repeating retry-stage examples during fallback dataset prep
 - an opt-in verifier gate that keeps only target-correct retry-stage recovery examples when Countdown metadata is available
+- deterministic hard Countdown eval slicing for multiplication/division-heavy comparison runs
 - GitHub repository setup and CI for the test suite
 
 ## Working Baseline
@@ -64,6 +65,7 @@ What works today:
 - evaluation can load trainer output roots directly even when the actual model lives inside `best-checkpoint` or `final-checkpoint`
 - fallback SFT preparation can append retry-stage recovery examples and rebalance them explicitly
 - fallback SFT preparation can require retry-stage recovery examples to verify against Countdown numbers and target before appending them
+- paper-aligned artifact prep now writes `countdown-test-hard.jsonl` beside the full eval set
 - the held-out hard slice can now be scored in both raw one-pass mode and reset-aware retry mode from the same checkpoint
 - verifier-grounded SFT ablations can now be compared against the expanded SFT and RLOO checkpoints
 - contrastive recovery SFT ablations can now be compared against the expanded SFT and verifier-grounded checkpoints
@@ -116,7 +118,7 @@ Interpretation:
 2. Add a stronger Countdown-native expert-trace source if strict recovery filtering still does not improve arithmetic grounding beyond the current `1/8` held-out result.
 3. Re-run reset-aware RLOO only after the SFT checkpoint produces stronger target-correct retries.
 4. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
-5. Run a larger raw-versus-reset-aware comparison on a broader hard Countdown slice.
+5. Run a larger raw-versus-reset-aware comparison using the generated `countdown-test-hard.jsonl` artifact.
 6. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
 
 ## Remaining Non-Engineering Work

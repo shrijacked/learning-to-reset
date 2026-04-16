@@ -14,6 +14,12 @@ from learning_to_reset.compare_eval_results import (
     render_comparison_markdown,
     write_comparison_outputs,
 )
+from learning_to_reset.countdown_slices import (
+    can_reach_with_add_sub_only,
+    expression_uses_multiplication_or_division,
+    filter_hard_countdown_samples,
+    is_hard_countdown_sample,
+)
 from learning_to_reset.countdown_solver import CountdownExpression, solve_countdown
 from learning_to_reset.countdown_verifier import (
     VerificationResult,
@@ -242,9 +248,11 @@ __all__ = [
     "curate_trace",
     "evaluate_reset_aware_model",
     "evaluate_rollout_candidates",
+    "expression_uses_multiplication_or_division",
     "fetch_paper_source_bundle",
     "fetch_countdown_source_records",
     "fetch_reference_trace_records",
+    "filter_hard_countdown_samples",
     "extract_memory_writes",
     "extract_retained_notes",
     "extract_answer_expression",
@@ -258,6 +266,7 @@ __all__ = [
     "manage_memory_clean_cycles",
     "manage_selective_retention_clean_cycles",
     "normalize_trace",
+    "is_hard_countdown_sample",
     "parse_countdown_user_prompt",
     "parse_reasoning_prompt",
     "prepare_countdown_examples",
@@ -273,6 +282,7 @@ __all__ = [
     "split_sequence",
     "summarize_rollout_candidates",
     "build_trace_record_from_response",
+    "can_reach_with_add_sub_only",
     "render_training_text",
     "render_comparison_markdown",
     "render_extension_comparison_markdown",
