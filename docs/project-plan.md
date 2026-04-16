@@ -78,6 +78,7 @@ flowchart LR
 - Hard-focused synthetic Countdown source generation can now create multiplication/division-heavy training prompts
 - Hard-focused SFT and reset-aware RLOO have both run locally, but neither produced target-correct answers on the held-out hard slice
 - Failed hard evals can now be mined into solver-verified recovery traces for the next training cycle
+- Plus-mined SFT has been evaluated on a fresh 32-example hard holdout with `29/32` valid and `1/32` correct under reset-aware retry
 - Remaining baseline work is stronger arithmetic grounding, larger target-model execution, and broader experiment comparison
 
 ### Extension

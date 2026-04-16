@@ -114,6 +114,10 @@ Observed pilot outcome:
 - the hard-focused RLOO checkpoint scored `0/3` valid and `0/3` correct in raw one-pass decoding, then `3/3` valid and `0/3` correct with reset-aware retry
 - failure mining over the hard-focused SFT eval output produced `15` solver-verified recovery records from the `3` failed hard examples
 - a combined plus-mined local artifact set prepared successfully with `1356` SFT train examples and `151` validation examples
+- a fresh generated hard holdout was created with `32/32` multiplication/division-heavy test examples
+- plus-mined SFT completed on the fresh-holdout artifact set with `train_loss = 0.0575` and `eval_loss = 0.1096`
+- plus-mined SFT raw one-pass decoding on the fresh hard holdout scored `0/32` valid and `0/32` correct
+- plus-mined SFT reset-aware retry on the fresh hard holdout scored `29/32` valid, `1/32` correct, `average_score = 0.13125`, and `clean_rate = 1.0`
 
 Interpretation:
 
@@ -126,6 +130,7 @@ Interpretation:
 - the hard-focused SFT and RLOO results confirm that reset improves answer format on harder prompts, but has not yet produced target-correct hard arithmetic
 - the hard-focused RLOO loss stayed at zero because the policy saw no correctness-reward variation on those sampled hard prompts
 - the mined recovery records are useful for the next training cycle, but they must be evaluated against a fresh hard holdout because they were derived from the current hard failures
+- the fresh hard holdout shows a small target-correct improvement, but most retry responses still state false verified equations, so arithmetic verification is still the main blocker
 - the main remaining baseline blocker is arithmetic grounding: the model often writes plausible step-by-step claims, but the verifier-computed expression value does not match the target
 - the first extension module remains separate from the baseline path, so future multi-clean work can proceed without destabilizing the one-shot baseline
 - the second extension module now supports explicit retained notes after clean, while still avoiding full scratchpad carryover
@@ -133,10 +138,10 @@ Interpretation:
 
 ## Remaining Engineering Work
 
-1. Train on the plus-mined recovery artifact set only after creating a fresh hard holdout for honest evaluation.
+1. Improve recovery supervision so the model checks expression values instead of copying the “verified candidate” form.
 2. Add or fetch a stronger Countdown-native expert-trace source with verified target-correct hard recoveries.
 3. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
-4. Re-run SFT and reset-aware RLOO after the trace source can produce positive correctness rewards on hard prompts.
+4. Re-run reset-aware RLOO after the SFT checkpoint produces more than sparse target-correct hard retries.
 5. Run a larger raw-versus-reset-aware comparison using a broader hard Countdown slice.
 6. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
 

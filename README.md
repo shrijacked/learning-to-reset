@@ -33,7 +33,7 @@ The repository currently covers three core software primitives:
 
 The repository now supports the baseline pipeline over prepared artifacts: fetch paper-aligned source files, prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is improving arithmetic grounding and scaling those real-source paths into stronger target-model runs.
 
-The latest local pilot now exercises that path on real fetched Countdown prompts plus expanded Countdown-aligned fallback traces. The best current CPU-only checkpoint is the expanded SFT run: raw one-pass decoding remains `0/8` valid, while reset-aware evaluation reaches `8/8` valid, `1/8` correct, and `clean_rate = 1.0` on the held-out slice. A balanced verifier-grounded ablation ties that result. Hard-focused SFT and a hard-focused reset-aware RLOO pass both completed, but neither improved target-correct arithmetic on the 3-example hard slice.
+The latest local pilot now exercises that path on real fetched Countdown prompts plus expanded Countdown-aligned fallback traces. The best current CPU-only checkpoint is the expanded SFT run: raw one-pass decoding remains `0/8` valid, while reset-aware evaluation reaches `8/8` valid, `1/8` correct, and `clean_rate = 1.0` on the held-out slice. A balanced verifier-grounded ablation ties that result. Hard-focused SFT and a hard-focused reset-aware RLOO pass both completed, but neither improved target-correct arithmetic on the original 3-example hard slice. A plus-mined SFT run on a fresh 32-example hard holdout scored `29/32` valid and `1/32` correct with reset-aware retry.
 
 ## Project Docs
 
@@ -178,7 +178,8 @@ tests/                     Regression tests for the current behavior
 
 ## Immediate Next Steps
 
-1. Add or fetch a stronger Countdown-native expert-trace source with verified target-correct recoveries.
-2. Scale from local CPU pilots to a larger target-model train/eval run once stronger traces are available.
-3. Run a broader raw-versus-reset-aware comparison on a larger hard Countdown slice.
-4. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
+1. Improve arithmetic verification in the recovery traces so the model stops writing plausible but false “verified” equations.
+2. Add or fetch a stronger Countdown-native expert-trace source with verified target-correct recoveries.
+3. Scale from local CPU pilots to a larger target-model train/eval run once stronger traces are available.
+4. Run a broader raw-versus-reset-aware comparison on a larger hard Countdown slice.
+5. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
