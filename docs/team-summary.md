@@ -14,6 +14,7 @@
   - step-by-step arithmetic walkthrough traces after reset
   - verifier-grounded recovery traces that state the checked expression value
   - contrastive recovery traces that reject the failed expression before giving the verified answer
+  - hard-focused source generation for multiplication/division-heavy prompts
 - Data/prompt preparation is in place:
   - trace and Countdown loaders
   - prompt assembly and split/export tooling
@@ -55,13 +56,17 @@
   - existing 8-example eval set produced `3` hard prompts
   - raw one-pass decoding scored `0/3` valid and `0/3` correct
   - reset-aware retry scored `3/3` valid but `0/3` correct
+- Next hard-focused artifact set is prepared locally:
+  - `64` generated hard Countdown prompts
+  - `844` solver-backed hard traces
+  - `1329` SFT train examples and `148` validation examples
 - A runnable baseline demo is available through:
   - `PYTHONPATH=src python3 -m learning_to_reset`
 
 ## To Do
 
-- Re-prepare the next SFT artifact set with the strict retry-recovery verifier gate enabled.
-- Add or build a stronger Countdown-native expert-trace source if strict recovery filtering still does not improve arithmetic correctness.
+- Run SFT on the prepared hard-focused artifact set.
+- Add or build a stronger Countdown-native expert-trace source if hard-focused synthetic training still does not improve arithmetic correctness.
 - Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 - Scale the local CPU pilot into a larger target-model run.
 - Run raw-versus-reset-aware comparison on the generated hard Countdown slice.
@@ -69,8 +74,8 @@
 
 ## Next Plan
 
-1. Build the next prepared artifact set using strict target-correct recovery filtering.
-2. Re-run SFT only when the filtered source is expected to beat the current `1/8` held-out correctness result.
+1. Run SFT on `tmp/paper-artifacts-hard-focus-64-all`.
+2. Compare the hard-focused SFT checkpoint against raw generation and reset-aware retry on `countdown-test-hard.jsonl`.
 3. Compare the next SFT checkpoint against raw generation, expanded SFT, verifier-grounded SFT, and the RLOO checkpoint.
 4. Run reset-aware RLOO only if the improved SFT checkpoint beats the current held-out correctness gate.
 5. Continue the extension track by comparing full reset, selective retention, and memory-aware clean loops after the one-shot baseline is stronger.

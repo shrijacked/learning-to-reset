@@ -25,6 +25,7 @@ Implemented and verified:
 - a deterministic Countdown solver and synthetic Countdown-aligned fallback trace generator
 - multi-solution synthetic Countdown supervision and step-by-step arithmetic walkthrough traces
 - verifier-grounded and contrastive synthetic recovery responses that explicitly state checked expression values
+- hard-focused synthetic Countdown source generation for multiplication/division-heavy prompts
 - automatic resolution of nested `best-checkpoint` and `final-checkpoint` model outputs
 - a first bounded multi-step cleaning extension with clean-budget and clean-penalty support
 - a selective-retention extension that carries explicit retained notes into retry prompts after clean
@@ -59,6 +60,7 @@ What works today:
 - the repo can fetch positive reference traces and expand them into a paired reset-aware trace corpus
 - the repo can prepare paper-aligned artifacts from those real source files
 - the repo can synthesize Countdown-aligned fallback traces locally when a stronger trace source is unavailable
+- the repo can force synthetic Countdown source generation onto hard multiplication/division-heavy prompts
 - the synthetic trace generator can emit walkthrough, verifier-grounded, and contrastive recovery styles for the same solved prompt
 - raw one-pass and reset-aware evaluation summaries can be compared with a repeatable CLI utility
 - the target Qwen model can complete local SFT checkpoints and reset-aware RL checkpoints on pilot subsets
@@ -101,6 +103,7 @@ Observed pilot outcome:
 - a generated hard-slice check from the existing 8-example eval set produced `3` multiplication/division-heavy prompts
 - on that hard slice, expanded SFT raw one-pass decoding scored `0/3` valid and `0/3` correct
 - on that hard slice, expanded SFT reset-aware retry evaluation scored `3/3` valid, `0/3` correct, `average_score = 0.10`, and `clean_rate = 1.0`
+- the next hard-focused local source build generated `64` hard Countdown prompts, `844` all-style solver-backed traces, and prepared `1329` SFT train examples plus `148` validation examples
 
 Interpretation:
 
@@ -118,8 +121,8 @@ Interpretation:
 
 ## Remaining Engineering Work
 
-1. Re-prepare the next SFT artifact set with the strict retry-recovery verifier gate enabled.
-2. Add a stronger Countdown-native expert-trace source if strict recovery filtering still does not improve arithmetic grounding beyond the current `1/8` held-out result.
+1. Run SFT on the hard-focused `tmp/paper-artifacts-hard-focus-64-all` artifact set.
+2. Add a stronger Countdown-native expert-trace source if hard-focused synthetic training still does not improve arithmetic grounding beyond the current `1/8` held-out result.
 3. Re-run reset-aware RLOO only after the SFT checkpoint produces stronger target-correct retries.
 4. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
 5. Run a larger raw-versus-reset-aware comparison using the generated `countdown-test-hard.jsonl` artifact.

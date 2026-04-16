@@ -10,6 +10,10 @@ from pathlib import Path
 import random
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from learning_to_reset.countdown_slices import (
+    can_reach_with_add_sub_only,
+    expression_uses_multiplication_or_division,
+)
 from learning_to_reset.data import CountdownSample, load_countdown_samples, render_countdown_question
 from learning_to_reset.paper_sources import write_jsonl_records
 
@@ -116,12 +120,25 @@ def _sample_target_expression(
     raise RuntimeError("Could not sample a solvable integer Countdown target within the profile range.")
 
 
+def _requires_multiplication_or_division(
+    *,
+    numbers: Sequence[int],
+    target: int,
+    expression: str,
+) -> bool:
+    return (
+        expression_uses_multiplication_or_division(expression)
+        and not can_reach_with_add_sub_only(numbers, target)
+    )
+
+
 def generate_synthetic_countdown_dataset(
     *,
     reference_path: str | Path,
     output_path: str | Path,
     num_samples: int,
     seed: int = 0,
+    require_hard: bool = False,
 ) -> Dict[str, object]:
     """Generate an offline Countdown dataset shaped like the local reference slice."""
 
@@ -150,6 +167,12 @@ def generate_synthetic_countdown_dataset(
             )
         except RuntimeError:
             continue
+        if require_hard and not _requires_multiplication_or_division(
+            numbers=numbers,
+            target=target,
+            expression=seed_expression,
+        ):
+            continue
 
         key = (numbers, target)
         if key in seen:
@@ -166,6 +189,8 @@ def generate_synthetic_countdown_dataset(
                     "source": "synthetic_countdown_dataset",
                     "seed_expression": seed_expression,
                     "reference_path": str(reference_path),
+                    "difficulty": "hard" if require_hard else "mixed",
+                    "requires_mul_div": require_hard,
                 },
             }
         )
@@ -182,6 +207,7 @@ def generate_synthetic_countdown_dataset(
         "arity_options": sorted(set(profile.arities)),
         "target_range": [profile.min_target, profile.max_target],
         "seed": seed,
+        "require_hard": require_hard,
         "output_path": str(output_path),
     }
     Path(output_path).with_suffix(".summary.json").write_text(
@@ -199,6 +225,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-path", required=True, help="Output JSONL for generated samples.")
     parser.add_argument("--num-samples", required=True, type=int, help="How many samples to generate.")
     parser.add_argument("--seed", type=int, default=0, help="Random seed for deterministic generation.")
+    parser.add_argument(
+        "--require-hard",
+        action="store_true",
+        help="Only write samples that require multiplication or division under the local hard-slice filter.",
+    )
     return parser
 
 
@@ -209,6 +240,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         output_path=args.output_path,
         num_samples=args.num_samples,
         seed=args.seed,
+        require_hard=args.require_hard,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=True))
     return 0

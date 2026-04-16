@@ -1,13 +1,17 @@
+from contextlib import redirect_stdout
+import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
+from learning_to_reset.countdown_slices import is_hard_countdown_sample
 from learning_to_reset.countdown_verifier import verify_countdown_expression
 from learning_to_reset.data import load_countdown_samples
 from learning_to_reset.synthetic_countdown_dataset import (
     build_sampling_profile,
     generate_synthetic_countdown_dataset,
+    main,
 )
 from learning_to_reset.countdown_solver import solve_countdown
 
@@ -81,6 +85,95 @@ class SyntheticCountdownDatasetTests(unittest.TestCase):
             )
             self.assertTrue(verification.is_valid)
             self.assertTrue(verification.reaches_target)
+
+    def test_generate_synthetic_countdown_dataset_can_require_hard_samples(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            reference_path = Path(tmp_dir) / "reference.jsonl"
+            output_path = Path(tmp_dir) / "generated-hard.jsonl"
+            reference_path.write_text(
+                "\n".join(
+                    json.dumps(record)
+                    for record in [
+                        {
+                            "source_id": "ref-1",
+                            "numbers": [6, 7, 8, 4],
+                            "target": 2,
+                            "question": "Use the numbers 6, 7, 8, 4 to reach 2.",
+                        },
+                        {
+                            "source_id": "ref-2",
+                            "numbers": [6, 7, 8, 4],
+                            "target": 100,
+                            "question": "Use the numbers 6, 7, 8, 4 to reach 100.",
+                        },
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            summary = generate_synthetic_countdown_dataset(
+                reference_path=reference_path,
+                output_path=output_path,
+                num_samples=3,
+                seed=11,
+                require_hard=True,
+            )
+            generated_samples = load_countdown_samples(output_path)
+
+        self.assertTrue(summary["require_hard"])
+        self.assertEqual(len(generated_samples), 3)
+        self.assertTrue(all(is_hard_countdown_sample(sample) for sample in generated_samples))
+        self.assertTrue(all(sample.metadata["difficulty"] == "hard" for sample in generated_samples))
+
+    def test_cli_accepts_require_hard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            reference_path = Path(tmp_dir) / "reference.jsonl"
+            output_path = Path(tmp_dir) / "generated-hard.jsonl"
+            reference_path.write_text(
+                "\n".join(
+                    json.dumps(record)
+                    for record in [
+                        {
+                            "source_id": "ref-1",
+                            "numbers": [6, 7, 8, 4],
+                            "target": 2,
+                            "question": "Use the numbers 6, 7, 8, 4 to reach 2.",
+                        },
+                        {
+                            "source_id": "ref-2",
+                            "numbers": [6, 7, 8, 4],
+                            "target": 100,
+                            "question": "Use the numbers 6, 7, 8, 4 to reach 100.",
+                        },
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                exit_code = main(
+                    [
+                        "--reference-path",
+                        str(reference_path),
+                        "--output-path",
+                        str(output_path),
+                        "--num-samples",
+                        "2",
+                        "--seed",
+                        "13",
+                        "--require-hard",
+                    ]
+                )
+            summary = json.loads(buffer.getvalue())
+            generated_samples = load_countdown_samples(output_path)
+
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(summary["require_hard"])
+        self.assertEqual(len(generated_samples), 2)
+        self.assertTrue(all(is_hard_countdown_sample(sample) for sample in generated_samples))
 
 
 if __name__ == "__main__":

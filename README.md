@@ -12,6 +12,7 @@ The repository currently covers three core software primitives:
 - A synthetic Countdown-aligned fallback trace generator backed by a deterministic solver
 - Multi-solution synthetic supervision and arithmetic walkthrough trace generation
 - Verifier-grounded and contrastive synthetic recovery responses for arithmetic-consistency supervision
+- Hard-focused synthetic Countdown sample generation for multiplication/division-heavy training data
 - A bounded multi-clean extension with a reset budget and per-clean penalty
 - A selective-retention extension that carries explicit `<retain>...</retain>` notes across clean resets
 - A recall-aware memory extension with explicit `<memory>...</memory>` writes, deterministic recall, and a memory-aware clean loop
@@ -97,8 +98,14 @@ This writes both `countdown-test.jsonl` and `countdown-test-hard.jsonl`; the har
 Generate a Countdown-aligned fallback trace set directly from local Countdown prompts:
 
 ```bash
+PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.synthetic_countdown_dataset \
+  --reference-path tmp/paper-assets/countdown-train.jsonl \
+  --output-path tmp/paper-assets/countdown-train-hard.jsonl \
+  --num-samples 64 \
+  --require-hard
+
 PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.synthetic_countdown_traces \
-  --countdown tmp/paper-assets/countdown-train.jsonl \
+  --countdown tmp/paper-assets/countdown-train-hard.jsonl \
   --output-path tmp/paper-assets/synthetic-countdown-traces.jsonl \
   --solutions-per-sample 4 \
   --recovery-style all
@@ -158,7 +165,7 @@ tests/                     Regression tests for the current behavior
 ## Immediate Next Steps
 
 1. Use the strict recovery verifier gate for the next prepared SFT artifact set.
-2. Add or acquire a stronger Countdown-native expert-trace source if strict recovery filtering still does not improve correctness.
+2. Train the next SFT checkpoint on the hard-focused synthetic artifact set now available under `tmp/paper-artifacts-hard-focus-64-all`.
 3. Re-run reset-aware RLOO only after SFT improves beyond the current `1/8` held-out correctness result.
 4. Scale from local CPU pilots to a larger target-model train/eval run.
 5. Run raw-versus-reset-aware comparison on `countdown-test-hard.jsonl`.

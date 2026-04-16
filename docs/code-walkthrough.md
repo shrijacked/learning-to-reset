@@ -32,6 +32,9 @@ The repository now includes a local baseline runtime over prepared artifacts. In
 - `src/learning_to_reset/synthetic_countdown_traces.py`
   - builds solver-backed Countdown trace records for local fallback training
   - supports walkthrough, verifier-grounded, and contrastive recovery responses after reset
+- `src/learning_to_reset/synthetic_countdown_dataset.py`
+  - generates additional solvable Countdown prompts
+  - can force hard multiplication/division-heavy samples for stronger arithmetic grounding runs
 - `src/learning_to_reset/rloo.py`
   - implements the reward math for reset-aware RLOO
 - `src/learning_to_reset/rollout_runtime.py`
