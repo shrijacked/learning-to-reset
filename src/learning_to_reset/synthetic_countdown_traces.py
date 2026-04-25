@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import random
 from fractions import Fraction
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Literal, Optional, Sequence, Tuple
@@ -15,8 +16,10 @@ from learning_to_reset.data import CountdownSample, load_countdown_samples
 from learning_to_reset.paper_sources import write_jsonl_records
 
 
-SingleRecoveryStyle = Literal["walkthrough", "verification", "contrastive"]
-RecoveryStyle = Literal["walkthrough", "verification", "contrastive", "both", "all"]
+SingleRecoveryStyle = Literal["walkthrough", "verification", "contrastive", "grounded"]
+RecoveryStyle = Literal[
+    "walkthrough", "verification", "contrastive", "grounded", "both", "all"
+]
 
 
 def _format_fraction(value: Fraction) -> str:
@@ -241,6 +244,149 @@ def build_contrastive_recovery_response(
     )
 
 
+def _expression_has_binop(expression: str) -> bool:
+    parsed = ast.parse(expression, mode="eval")
+    return any(isinstance(node, ast.BinOp) for node in ast.walk(parsed))
+
+
+def _enrich_rejected_expression(
+    sample: CountdownSample,
+    rejected_expression: str,
+) -> str:
+    """Promote a degenerate single-number rejected hypothesis to a 2-arg op."""
+
+    if _expression_has_binop(rejected_expression):
+        return rejected_expression
+    if len(sample.numbers) < 2:
+        return rejected_expression
+
+    a = int(sample.numbers[0])
+    b = int(sample.numbers[1])
+    for op in ("+", "-", "*"):
+        candidate = f"({a} {op} {b})"
+        verification = verify_countdown_expression(
+            candidate,
+            numbers=sample.numbers,
+            target=sample.target,
+        )
+        if verification.is_valid and not verification.reaches_target:
+            return candidate
+    return rejected_expression
+
+
+def build_grounded_recovery_response(
+    sample: CountdownSample,
+    *,
+    solution_expression: str,
+    rejected_expression: Optional[str] = None,
+    rng_seed: int = 0,
+) -> str:
+    """Render an arithmetic-grounded recovery trace.
+
+    The trace contains: per-`BinOp` substep arithmetic for both a rejected
+    hypothesis and the accepted solution, an explicit number-budget audit,
+    and a final-value reconciliation. Surface phrasing is randomized by
+    `rng_seed` so the model cannot memorize a fixed template.
+    """
+
+    solution_verification = verify_countdown_expression(
+        solution_expression,
+        numbers=sample.numbers,
+        target=sample.target,
+    )
+    if not solution_verification.is_valid or not solution_verification.reaches_target:
+        raise ValueError(
+            f"Grounded recovery solution does not reach target for sample {sample.source_id!r}."
+        )
+
+    if rejected_expression is None:
+        rejected_expression = build_negative_expression(sample)
+    rejected_expression = _enrich_rejected_expression(sample, rejected_expression)
+
+    rejected_verification = verify_countdown_expression(
+        rejected_expression,
+        numbers=sample.numbers,
+        target=sample.target,
+    )
+    if not rejected_verification.is_valid:
+        raise ValueError(
+            f"Grounded recovery rejected expression must be legal for sample {sample.source_id!r}."
+        )
+    if rejected_verification.reaches_target:
+        raise ValueError(
+            f"Grounded recovery rejected expression must miss target for sample {sample.source_id!r}."
+        )
+
+    rng = random.Random(rng_seed)
+    intros = (
+        "After resetting, I rebuild from numbers",
+        "Reset complete. Restarting carefully with numbers",
+        "Cleared the scratch work. Working from numbers",
+        "Starting over from a clean slate with numbers",
+    )
+    label_pairs = (("A", "B"), ("1", "2"), ("X", "Y"))
+    accept_phrases = ("Accept hypothesis", "Accept candidate", "Accept path")
+    reject_phrases = ("Reject hypothesis", "Reject candidate", "Reject path")
+
+    intro = rng.choice(intros)
+    rejected_label, accepted_label = rng.choice(label_pairs)
+    accept_phrase = rng.choice(accept_phrases)
+    reject_phrase = rng.choice(reject_phrases)
+    budget_items = [f"used {n} once" for n in sample.numbers]
+    rng.shuffle(budget_items)
+
+    _, rejected_value, rejected_steps = _describe_expression_node(
+        ast.parse(rejected_expression, mode="eval").body
+    )
+    _, solution_value, solution_steps = _describe_expression_node(
+        ast.parse(solution_expression, mode="eval").body
+    )
+    rejected_value_str = _format_fraction(rejected_value)
+    solution_value_str = _format_fraction(solution_value)
+
+    def _format_steps(steps: Tuple[str, ...]) -> List[str]:
+        if not steps:
+            return ["  Direct value with no substeps."]
+        return [f"  Step {idx}: {step}" for idx, step in enumerate(steps, start=1)]
+
+    lines: List[str] = [
+        f"{intro} {list(sample.numbers)}, target {sample.target}.",
+        "",
+        f"Hypothesis {rejected_label}: try {rejected_expression}.",
+    ]
+    lines.extend(_format_steps(rejected_steps))
+    lines.append(
+        f"  Reconcile: {rejected_value_str} != {sample.target}. "
+        f"{reject_phrase} {rejected_label}."
+    )
+    lines.append("")
+    lines.append(f"Hypothesis {accepted_label}: try {solution_expression}.")
+    lines.extend(_format_steps(solution_steps))
+    lines.append(
+        f"  Reconcile: {solution_value_str} == {sample.target}. "
+        f"{accept_phrase} {accepted_label}."
+    )
+    lines.append("")
+    n = len(sample.numbers)
+    lines.append(
+        f"Number budget: {', '.join(budget_items)}. {n} of {n} allowed numbers used."
+    )
+    lines.append(
+        f"Final value check: candidate evaluates to {solution_value_str}, "
+        f"matches target {sample.target}."
+    )
+
+    body = "\n".join(lines)
+    return (
+        "<think>\n"
+        f"{body}\n"
+        "</think>\n"
+        "<answer>\n"
+        f"{solution_expression}\n"
+        "</answer>"
+    )
+
+
 def _recovery_styles_for(style: RecoveryStyle) -> Tuple[SingleRecoveryStyle, ...]:
     if style == "walkthrough":
         return ("walkthrough",)
@@ -248,12 +394,15 @@ def _recovery_styles_for(style: RecoveryStyle) -> Tuple[SingleRecoveryStyle, ...
         return ("verification",)
     if style == "contrastive":
         return ("contrastive",)
+    if style == "grounded":
+        return ("grounded",)
     if style == "both":
         return ("walkthrough", "verification")
     if style == "all":
-        return ("walkthrough", "verification", "contrastive")
+        return ("walkthrough", "verification", "contrastive", "grounded")
     raise ValueError(
-        "recovery_style must be 'walkthrough', 'verification', 'contrastive', 'both', or 'all'."
+        "recovery_style must be 'walkthrough', 'verification', 'contrastive', "
+        "'grounded', 'both', or 'all'."
     )
 
 
@@ -273,6 +422,12 @@ def _build_recovery_response_for_style(
         return build_verified_recovery_response(
             sample,
             solution_expression=solution_expression,
+        )
+    if recovery_style == "grounded":
+        return build_grounded_recovery_response(
+            sample,
+            solution_expression=solution_expression,
+            rejected_expression=incorrect_expression,
         )
     return build_contrastive_recovery_response(
         sample,
@@ -483,7 +638,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--recovery-style",
-        choices=("walkthrough", "verification", "contrastive", "both", "all"),
+        choices=(
+            "walkthrough",
+            "verification",
+            "contrastive",
+            "grounded",
+            "both",
+            "all",
+        ),
         default="walkthrough",
         help="Retry response style for synthetic negative traces.",
     )

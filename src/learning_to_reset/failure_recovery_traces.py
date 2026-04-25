@@ -15,14 +15,17 @@ from learning_to_reset.prompts import PromptExample
 from learning_to_reset.sft_runtime import load_prepared_examples
 from learning_to_reset.synthetic_countdown_traces import (
     build_contrastive_recovery_response,
+    build_grounded_recovery_response,
     build_negative_expression,
     build_recovery_response,
     build_verified_recovery_response,
 )
 
 
-SingleRecoveryStyle = Literal["walkthrough", "verification", "contrastive"]
-RecoveryStyle = Literal["walkthrough", "verification", "contrastive", "both", "all"]
+SingleRecoveryStyle = Literal["walkthrough", "verification", "contrastive", "grounded"]
+RecoveryStyle = Literal[
+    "walkthrough", "verification", "contrastive", "grounded", "both", "all"
+]
 
 
 def _read_jsonl_records(path: str | Path) -> Tuple[Dict[str, Any], ...]:
@@ -53,12 +56,15 @@ def _recovery_styles_for(style: RecoveryStyle) -> Tuple[SingleRecoveryStyle, ...
         return ("verification",)
     if style == "contrastive":
         return ("contrastive",)
+    if style == "grounded":
+        return ("grounded",)
     if style == "both":
         return ("walkthrough", "verification")
     if style == "all":
-        return ("walkthrough", "verification", "contrastive")
+        return ("walkthrough", "verification", "contrastive", "grounded")
     raise ValueError(
-        "recovery_style must be 'walkthrough', 'verification', 'contrastive', 'both', or 'all'."
+        "recovery_style must be 'walkthrough', 'verification', 'contrastive', "
+        "'grounded', 'both', or 'all'."
     )
 
 
@@ -130,6 +136,12 @@ def _build_recovery_response(
         return build_verified_recovery_response(
             sample,
             solution_expression=solution_expression,
+        )
+    if recovery_style == "grounded":
+        return build_grounded_recovery_response(
+            sample,
+            solution_expression=solution_expression,
+            rejected_expression=failed_expression,
         )
     return build_contrastive_recovery_response(
         sample,
@@ -319,7 +331,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--recovery-style",
-        choices=("walkthrough", "verification", "contrastive", "both", "all"),
+        choices=(
+            "walkthrough",
+            "verification",
+            "contrastive",
+            "grounded",
+            "both",
+            "all",
+        ),
         default="contrastive",
         help="Recovery response style to generate.",
     )

@@ -7,6 +7,7 @@ from learning_to_reset.data import CountdownSample
 from learning_to_reset.countdown_verifier import score_countdown_response
 from learning_to_reset.synthetic_countdown_traces import (
     build_contrastive_recovery_response,
+    build_grounded_recovery_response,
     build_negative_trace_record,
     build_positive_trace_record,
     build_solution_walkthrough,
@@ -155,7 +156,7 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
         )
 
         self.assertEqual(skipped, 0)
-        self.assertEqual(len(records), 4)
+        self.assertEqual(len(records), 5)
         recovery_responses = [
             record["recovery_response"]
             for record in records
@@ -164,6 +165,99 @@ class SyntheticCountdownTraceTests(unittest.TestCase):
         self.assertTrue(any("Step 1:" in response for response in recovery_responses))
         self.assertTrue(any("Verifier check:" in response for response in recovery_responses))
         self.assertTrue(any("Rejected candidate:" in response for response in recovery_responses))
+        self.assertTrue(any("Number budget" in response for response in recovery_responses))
+
+    def test_grounded_recovery_response_includes_substep_arithmetic(self) -> None:
+        response = build_grounded_recovery_response(
+            self.sample,
+            solution_expression="((9 * 11) - (12 + 17))",
+        )
+
+        verification = score_countdown_response(response, self.sample)
+        self.assertTrue(verification.is_valid)
+        self.assertTrue(verification.reaches_target)
+        self.assertIn("Compute (9 * 11) = 99.", response)
+        self.assertIn("Compute (12 + 17) = 29.", response)
+        self.assertIn("Compute ((9 * 11) - (12 + 17)) = 70.", response)
+
+    def test_grounded_recovery_response_lists_rejected_hypothesis_with_substeps(
+        self,
+    ) -> None:
+        response = build_grounded_recovery_response(
+            self.sample,
+            solution_expression="((9 * 11) - (12 + 17))",
+            rejected_expression="(11 + 12)",
+        )
+
+        self.assertIn("(11 + 12)", response)
+        self.assertIn("Compute (11 + 12) = 23.", response)
+        self.assertIn("23", response)
+        self.assertIn("Reject", response)
+
+    def test_grounded_recovery_response_includes_number_budget_audit(self) -> None:
+        response = build_grounded_recovery_response(
+            self.sample,
+            solution_expression="((9 * 11) - (12 + 17))",
+        )
+        for number in self.sample.numbers:
+            self.assertIn(f"used {number}", response)
+        self.assertIn("4 of 4", response)
+
+    def test_grounded_recovery_response_final_value_matches_target(self) -> None:
+        response = build_grounded_recovery_response(
+            self.sample,
+            solution_expression="((9 * 11) - (12 + 17))",
+        )
+        self.assertIn("matches target 70", response)
+
+    def test_grounded_recovery_response_seeds_template_variation(self) -> None:
+        base = build_grounded_recovery_response(
+            self.sample,
+            solution_expression="((9 * 11) - (12 + 17))",
+            rng_seed=0,
+        )
+        other = build_grounded_recovery_response(
+            self.sample,
+            solution_expression="((9 * 11) - (12 + 17))",
+            rng_seed=7,
+        )
+        self.assertNotEqual(base, other)
+        for response in (base, other):
+            verification = score_countdown_response(response, self.sample)
+            self.assertTrue(verification.is_valid)
+            self.assertTrue(verification.reaches_target)
+
+    def test_negative_trace_record_can_emit_grounded_recovery(self) -> None:
+        record = build_negative_trace_record(
+            self.sample,
+            recovery_style="grounded",
+        )
+
+        recovery_verification = score_countdown_response(
+            record["recovery_response"], self.sample
+        )
+        self.assertEqual(record["metadata"]["recovery_style"], "grounded")
+        self.assertTrue(recovery_verification.is_valid)
+        self.assertTrue(recovery_verification.reaches_target)
+        self.assertIn("Number budget", record["recovery_response"])
+        self.assertIn("Reject", record["recovery_response"])
+
+    def test_build_synthetic_trace_records_can_emit_grounded_recovery_only(
+        self,
+    ) -> None:
+        records, skipped = build_synthetic_trace_records(
+            [self.sample],
+            recovery_style="grounded",
+        )
+
+        self.assertEqual(skipped, 0)
+        self.assertEqual(len(records), 2)
+        negative_records = [r for r in records if not r["is_correct"]]
+        self.assertEqual(len(negative_records), 1)
+        self.assertEqual(
+            negative_records[0]["metadata"]["recovery_style"], "grounded"
+        )
+        self.assertIn("Number budget", negative_records[0]["recovery_response"])
 
     def test_generate_synthetic_trace_corpus_writes_jsonl(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

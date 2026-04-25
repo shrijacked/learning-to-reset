@@ -85,6 +85,51 @@ class FailureRecoveryTraceTests(unittest.TestCase):
         self.assertEqual(summary["records_written"], 0)
         self.assertEqual(summary["skipped_solved_or_valid"], 1)
 
+    def test_grounded_recovery_style_propagates_through_failure_mining(self) -> None:
+        example = PromptExample(
+            prompt=build_reasoning_prompt(
+                "Use the numbers 22, 72, 19, 25 to reach 74.",
+                allow_clean=True,
+            ),
+            response="",
+            metadata={
+                "source_id": "hard-2",
+                "numbers": (22, 72, 19, 25),
+                "target": 74,
+                "question": "Use the numbers 22, 72, 19, 25 to reach 74.",
+            },
+        )
+        failed_result = {
+            "source_id": "hard-2",
+            "response": "<think>I got stuck.</think><clean>",
+            "is_valid": False,
+            "reaches_target": False,
+            "reason": "No answer block.",
+        }
+
+        records, summary = build_failure_recovery_trace_records(
+            [example],
+            [failed_result],
+            recovery_style="grounded",
+        )
+
+        self.assertEqual(summary["records_written"], 1)
+        self.assertEqual(records[0]["metadata"]["recovery_style"], "grounded")
+        self.assertIn("Number budget", records[0]["recovery_response"])
+
+        sample = type(
+            "Sample",
+            (),
+            {
+                "numbers": (22, 72, 19, 25),
+                "target": 74,
+                "source_id": "hard-2",
+            },
+        )()
+        verification = score_countdown_response(records[0]["recovery_response"], sample)
+        self.assertTrue(verification.is_valid)
+        self.assertTrue(verification.reaches_target)
+
     def test_generate_failure_recovery_trace_corpus_writes_jsonl_and_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
