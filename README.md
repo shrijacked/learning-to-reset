@@ -11,7 +11,8 @@ The repository currently covers three core software primitives:
 - Modified RLOO utilities that propagate the final reward through both segments
 - A synthetic Countdown-aligned fallback trace generator backed by a deterministic solver
 - Multi-solution synthetic supervision and arithmetic walkthrough trace generation
-- Verifier-grounded and contrastive synthetic recovery responses for arithmetic-consistency supervision
+- Verifier-grounded, contrastive, and arithmetic-grounded synthetic recovery responses (including the `grounded` style with substep arithmetic, rejected hypothesis, number-budget audit, and final-value reconciliation) for arithmetic-consistency supervision
+- A deep-verify filter that re-checks every inline `a op b = c` claim in mined or synthetic recoveries before they enter SFT
 - Hard-focused synthetic Countdown sample generation for multiplication/division-heavy training data
 - Failure-mined recovery trace generation from failed hard eval outputs
 - A bounded multi-clean extension with a reset budget and per-clean penalty
@@ -64,8 +65,10 @@ Install the local training stack:
 
 ```bash
 python3 -m venv .venv
-./.venv/bin/pip install transformers datasets accelerate torch
+./.venv/bin/pip install -e .[trainer]
 ```
+
+The `trainer` extra installs `transformers`, `datasets`, `accelerate`, and `torch`. Skip it if you only want to run the unit tests, which work on the standard library alone.
 
 Prepare split JSONL artifacts from raw trace and Countdown files:
 
@@ -111,6 +114,8 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.synthetic_countdown_trace
   --solutions-per-sample 4 \
   --recovery-style all
 ```
+
+`--recovery-style all` now includes the `grounded` style alongside `walkthrough`, `verification`, and `contrastive`. Use `--recovery-style grounded` to emit only the arithmetic-grounded template with substep arithmetic, a rejected hypothesis, a number-budget audit, and a final-value reconciliation.
 
 Mine failed hard eval outputs into solver-verified recovery traces for the next training cycle:
 

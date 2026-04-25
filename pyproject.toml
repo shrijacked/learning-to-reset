@@ -12,6 +12,14 @@ authors = [
   { name = "Learning to Reset contributors" }
 ]
 
+[project.optional-dependencies]
+trainer = [
+  "transformers",
+  "datasets",
+  "accelerate",
+  "torch",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
