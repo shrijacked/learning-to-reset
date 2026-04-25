@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learning to Reset Extension Controllers</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px;
+      background: #020617;
+      color: #e2e8f0;
+      font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    }
+    .container {
+      max-width: 1460px;
+      margin: 0 auto;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: #a78bfa;
+      box-shadow: 0 0 18px rgba(167, 139, 250, 0.85);
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      color: #f8fafc;
+    }
+    .subtitle {
+      margin: 0 0 20px 24px;
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      padding: 20px;
+      overflow-x: auto;
+      box-shadow: 0 24px 80px rgba(2, 6, 23, 0.45);
+    }
+    svg {
+      display: block;
+      width: 100%;
+      min-width: 1320px;
+      height: auto;
+    }
+    .cards {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .card h3 {
+      margin: 0 0 10px 0;
+      font-size: 13px;
+      color: #f8fafc;
+    }
+    .card p {
+      margin: 0;
+      color: #94a3b8;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+    .footer {
+      margin-top: 16px;
+      color: #64748b;
+      font-size: 12px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-row">
+      <div class="pulse-dot"></div>
+      <h1>Extension Controller View</h1>
+    </div>
+    <p class="subtitle">A side-by-side picture of the three implemented directions beyond one-shot reset: full clean, selective retention, and recall-aware memory.</p>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1440 860" role="img" aria-label="Extension controller comparison">
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"></path>
+          </marker>
+          <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+            <path d="M 36 0 L 0 0 0 36" fill="none" stroke="#122033" stroke-width="0.8"></path>
+          </pattern>
+        </defs>
+
+        <rect width="1440" height="860" fill="url(#grid)"></rect>
+
+        <rect x="60" y="90" width="150" height="120" rx="12" fill="rgba(30, 41, 59, 0.65)" stroke="#94a3b8" stroke-width="1.7"></rect>
+        <text x="135" y="130" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Same problem</text>
+        <text x="135" y="150" fill="#94a3b8" font-size="11" text-anchor="middle">weak initial</text>
+        <text x="135" y="168" fill="#94a3b8" font-size="11" text-anchor="middle">reasoning path</text>
+        <text x="135" y="188" fill="#94a3b8" font-size="11" text-anchor="middle">needs recovery</text>
+
+        <rect x="260" y="60" width="330" height="610" rx="18" fill="rgba(34, 211, 238, 0.05)" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="8 6"></rect>
+        <text x="286" y="86" fill="#22d3ee" font-size="14" font-weight="700">A. Full reset</text>
+
+        <rect x="625" y="60" width="330" height="610" rx="18" fill="rgba(52, 211, 153, 0.05)" stroke="#34d399" stroke-width="1.4" stroke-dasharray="8 6"></rect>
+        <text x="651" y="86" fill="#34d399" font-size="14" font-weight="700">B. Selective retention</text>
+
+        <rect x="990" y="60" width="330" height="610" rx="18" fill="rgba(167, 139, 250, 0.05)" stroke="#a78bfa" stroke-width="1.4" stroke-dasharray="8 6"></rect>
+        <text x="1016" y="86" fill="#a78bfa" font-size="14" font-weight="700">C. Recall-aware memory</text>
+
+        <rect x="360" y="100" width="130" height="80" rx="10" fill="rgba(6, 78, 59, 0.35)" stroke="#34d399" stroke-width="1.6"></rect>
+        <text x="425" y="132" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">y0</text>
+        <text x="425" y="150" fill="#94a3b8" font-size="10" text-anchor="middle">model runs once</text>
+        <text x="425" y="166" fill="#94a3b8" font-size="10" text-anchor="middle">and emits clean</text>
+
+        <rect x="360" y="240" width="130" height="90" rx="10" fill="rgba(34, 211, 238, 0.05)" stroke="#22d3ee" stroke-width="1.6"></rect>
+        <text x="425" y="272" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">context wipe</text>
+        <text x="425" y="290" fill="#94a3b8" font-size="10" text-anchor="middle">drop prior scratchpad</text>
+        <text x="425" y="306" fill="#94a3b8" font-size="10" text-anchor="middle">fresh retry prompt</text>
+
+        <rect x="360" y="390" width="130" height="90" rx="10" fill="rgba(6, 78, 59, 0.35)" stroke="#34d399" stroke-width="1.6"></rect>
+        <text x="425" y="422" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">y1</text>
+        <text x="425" y="440" fill="#94a3b8" font-size="10" text-anchor="middle">retry from blank</text>
+        <text x="425" y="456" fill="#94a3b8" font-size="10" text-anchor="middle">reasoning state</text>
+
+        <rect x="360" y="530" width="130" height="90" rx="10" fill="rgba(76, 29, 149, 0.35)" stroke="#a78bfa" stroke-width="1.6"></rect>
+        <text x="425" y="562" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">signal today</text>
+        <text x="425" y="580" fill="#94a3b8" font-size="10" text-anchor="middle">better validity</text>
+        <text x="425" y="596" fill="#94a3b8" font-size="10" text-anchor="middle">limited correctness</text>
+
+        <line x1="135" y1="150" x2="260" y2="150" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+        <line x1="425" y1="180" x2="425" y2="240" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+        <line x1="425" y1="330" x2="425" y2="390" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+        <line x1="425" y1="480" x2="425" y2="530" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+
+        <rect x="725" y="100" width="130" height="80" rx="10" fill="rgba(6, 78, 59, 0.35)" stroke="#34d399" stroke-width="1.6"></rect>
+        <text x="790" y="132" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">y0</text>
+        <text x="790" y="150" fill="#94a3b8" font-size="10" text-anchor="middle">find local mistakes</text>
+        <text x="790" y="166" fill="#94a3b8" font-size="10" text-anchor="middle">before cleaning</text>
+
+        <rect x="690" y="240" width="200" height="100" rx="10" fill="rgba(6, 78, 59, 0.35)" stroke="#34d399" stroke-width="1.6"></rect>
+        <text x="790" y="272" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">retain note</text>
+        <text x="790" y="290" fill="#94a3b8" font-size="10" text-anchor="middle">&lt;retain&gt; short trusted summary &lt;/retain&gt;</text>
+        <text x="790" y="308" fill="#94a3b8" font-size="10" text-anchor="middle">keep only compact useful facts</text>
+        <text x="790" y="326" fill="#94a3b8" font-size="10" text-anchor="middle">discard the rest</text>
+
+        <rect x="725" y="390" width="130" height="90" rx="10" fill="rgba(6, 78, 59, 0.35)" stroke="#34d399" stroke-width="1.6"></rect>
+        <text x="790" y="422" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">y1 with note</text>
+        <text x="790" y="440" fill="#94a3b8" font-size="10" text-anchor="middle">retry sees only</text>
+        <text x="790" y="456" fill="#94a3b8" font-size="10" text-anchor="middle">retained summary</text>
+
+        <rect x="725" y="530" width="130" height="90" rx="10" fill="rgba(76, 29, 149, 0.35)" stroke="#a78bfa" stroke-width="1.6"></rect>
+        <text x="790" y="562" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">goal</text>
+        <text x="790" y="580" fill="#94a3b8" font-size="10" text-anchor="middle">keep helpful sub-results</text>
+        <text x="790" y="596" fill="#94a3b8" font-size="10" text-anchor="middle">without full carryover</text>
+
+        <line x1="135" y1="150" x2="625" y2="150" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+        <line x1="790" y1="180" x2="790" y2="240" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+        <line x1="790" y1="340" x2="790" y2="390" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+        <line x1="790" y1="480" x2="790" y2="530" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+
+        <rect x="1085" y="100" width="140" height="80" rx="10" fill="rgba(6, 78, 59, 0.35)" stroke="#34d399" stroke-width="1.6"></rect>
+        <text x="1155" y="132" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">y0</text>
+        <text x="1155" y="150" fill="#94a3b8" font-size="10" text-anchor="middle">emit clean and</text>
+        <text x="1155" y="166" fill="#94a3b8" font-size="10" text-anchor="middle">memory candidate</text>
+
+        <rect x="1060" y="240" width="190" height="100" rx="10" fill="rgba(76, 29, 149, 0.35)" stroke="#a78bfa" stroke-width="1.6"></rect>
+        <text x="1155" y="272" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">memory write</text>
+        <text x="1155" y="290" fill="#94a3b8" font-size="10" text-anchor="middle">&lt;memory&gt; durable note &lt;/memory&gt;</text>
+        <text x="1155" y="308" fill="#94a3b8" font-size="10" text-anchor="middle">stored for later recall</text>
+        <text x="1155" y="326" fill="#94a3b8" font-size="10" text-anchor="middle">outside scratchpad</text>
+
+        <rect x="1085" y="390" width="140" height="90" rx="10" fill="rgba(8, 51, 68, 0.34)" stroke="#22d3ee" stroke-width="1.6"></rect>
+        <text x="1155" y="422" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">recall prompt</text>
+        <text x="1155" y="440" fill="#94a3b8" font-size="10" text-anchor="middle">retrieve relevant</text>
+        <text x="1155" y="456" fill="#94a3b8" font-size="10" text-anchor="middle">memory notes</text>
+
+        <rect x="1085" y="530" width="140" height="90" rx="10" fill="rgba(6, 78, 59, 0.35)" stroke="#34d399" stroke-width="1.6"></rect>
+        <text x="1155" y="562" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">y1 with recall</text>
+        <text x="1155" y="580" fill="#94a3b8" font-size="10" text-anchor="middle">retry uses retrieved</text>
+        <text x="1155" y="596" fill="#94a3b8" font-size="10" text-anchor="middle">external memory</text>
+
+        <line x1="135" y1="150" x2="990" y2="150" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+        <line x1="1155" y1="180" x2="1155" y2="240" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+        <line x1="1155" y1="340" x2="1155" y2="390" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+        <line x1="1155" y1="480" x2="1155" y2="530" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"></line>
+
+        <rect x="360" y="715" width="860" height="95" rx="14" fill="rgba(15, 23, 42, 0.88)" stroke="#1e293b" stroke-width="1.4"></rect>
+        <text x="790" y="747" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">extension_comparison.py</text>
+        <text x="790" y="770" fill="#94a3b8" font-size="11" text-anchor="middle">shared comparison layer for validity, correctness, clean usage, reset cost, and trajectory behavior</text>
+        <text x="790" y="790" fill="#94a3b8" font-size="11" text-anchor="middle">current status: infrastructure implemented, larger-scale experiments still pending</text>
+
+        <path d="M 425 620 C 425 690, 520 715, 650 715" fill="none" stroke="#22d3ee" stroke-width="2.2" marker-end="url(#arrow)"></path>
+        <path d="M 790 620 C 790 690, 790 715, 790 715" fill="none" stroke="#34d399" stroke-width="2.2" marker-end="url(#arrow)"></path>
+        <path d="M 1155 620 C 1155 690, 1060 715, 930 715" fill="none" stroke="#a78bfa" stroke-width="2.2" marker-end="url(#arrow)"></path>
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h3>Why This Matters</h3>
+        <p>The baseline paper setup is one-shot reset, but the more ambitious contribution path is already in code: preserving only selected information or routing useful facts through an explicit memory channel.</p>
+      </div>
+      <div class="card">
+        <h3>What Is New Here</h3>
+        <p>These are not just planned ideas. The multi-clean, selective-retention, and memory-aware modules already exist in the repository and can be compared through a shared evaluation utility.</p>
+      </div>
+      <div class="card">
+        <h3>What Is Still Missing</h3>
+        <p>The extension controllers still need stronger baseline arithmetic performance before larger comparisons will be meaningful, so the next work is mostly better supervision and scaled runs.</p>
+      </div>
+    </div>
+
+    <div class="footer">Extension-focused view for collaborator discussions about future contributions beyond the one-shot baseline.</div>
+  </div>
+</body>
+</html>
