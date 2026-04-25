@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from fractions import Fraction
 import re
 from typing import Any, Generic, Optional, Sequence, Tuple, TypeVar
 
@@ -14,6 +15,50 @@ from learning_to_reset.prompts import (
     build_reasoning_prompt,
     build_sft_training_example,
 )
+
+
+_ARITHMETIC_CLAIM_PATTERN = re.compile(
+    r"(?<![\d/])(-?\d+(?:/\d+)?)\s*([+\-*/])\s*(-?\d+(?:/\d+)?)\s*=\s*"
+    r"(-?\d+(?:/\d+)?)(?![\d/])"
+)
+
+
+def _deep_verify_recovery_text(text: str) -> bool:
+    """Re-check every plain `a op b = c` claim in a recovery body with `Fraction`.
+
+    Defense in depth on top of the answer-block target check: if any inline
+    arithmetic claim does not actually compute as written, drop the trace.
+    Parenthesized claims like `((9 * 11) - (12 + 17)) = 70` are intentionally
+    skipped because the answer-block verification already proves the outermost
+    expression. This filter is meant to catch lying intermediate substeps,
+    which is the failure mode mined from the 1/32 hard-holdout baseline.
+    """
+
+    for match in _ARITHMETIC_CLAIM_PATTERN.finditer(text):
+        try:
+            left = Fraction(match.group(1))
+            right = Fraction(match.group(3))
+            claimed = Fraction(match.group(4))
+        except (ValueError, ZeroDivisionError):
+            continue
+
+        op = match.group(2)
+        if op == "+":
+            actual = left + right
+        elif op == "-":
+            actual = left - right
+        elif op == "*":
+            actual = left * right
+        elif op == "/":
+            if right == 0:
+                return False
+            actual = left / right
+        else:
+            continue
+
+        if actual != claimed:
+            return False
+    return True
 
 
 T = TypeVar("T")
@@ -98,6 +143,8 @@ def _verify_recovery_response(
 
     verification = score_countdown_response(recovery_response, sample)
     if not verification.is_valid or not verification.reaches_target:
+        return None
+    if not _deep_verify_recovery_text(recovery_response):
         return None
     return verification
 

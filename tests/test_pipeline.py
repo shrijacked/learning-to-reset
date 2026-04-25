@@ -127,6 +127,55 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(recovery_examples[0].metadata["source_id"], "trace-good")
         self.assertEqual(recovery_examples[0].metadata["recovery_expression"], "((7 + 2) + 1)")
 
+    def test_require_target_correct_recovery_drops_inconsistent_arithmetic_claims(
+        self,
+    ) -> None:
+        records = (
+            TraceRecord(
+                source_id="trace-bad-claim",
+                problem="Make 10 from 7, 2, 1",
+                raw_trace="<think>Wrong turn.</think><answer>9</answer>",
+                is_correct=False,
+                metadata={
+                    "numbers": [7, 2, 1],
+                    "target": 10,
+                    "recovery_response": (
+                        "<think>2 + 1 = 7.</think><answer>((7 + 2) + 1)</answer>"
+                    ),
+                },
+            ),
+            TraceRecord(
+                source_id="trace-good-claim",
+                problem="Make 10 from 7, 2, 1",
+                raw_trace="<think>Wrong turn.</think><answer>9</answer>",
+                is_correct=False,
+                metadata={
+                    "numbers": [7, 2, 1],
+                    "target": 10,
+                    "recovery_response": (
+                        "<think>Compute (7 + 2) = 9.</think>"
+                        "<answer>((7 + 2) + 1)</answer>"
+                    ),
+                },
+            ),
+        )
+
+        examples = prepare_sft_examples(
+            records,
+            include_recovery_examples=True,
+            require_recovery_target_correct=True,
+        )
+
+        recovery_examples = [
+            example
+            for example in examples
+            if example.metadata.get("stage") == "retry-recovery"
+        ]
+        self.assertEqual(len(recovery_examples), 1)
+        self.assertEqual(
+            recovery_examples[0].metadata["source_id"], "trace-good-claim"
+        )
+
     def test_target_correct_recovery_gate_skips_missing_countdown_metadata(self) -> None:
         records = (
             TraceRecord(
