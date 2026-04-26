@@ -40,15 +40,21 @@ def evaluate_countdown_outputs(
     correct = 0
     valid = 0
     total_score = 0.0
+    cleaned_count = 0
+    cleaned_score_total = 0.0
     for example, response in zip(examples, responses):
         sample = build_countdown_sample_from_example(example)
         verification = score_countdown_response(response, sample)
         score = (0.1 if verification.is_valid else 0.0) + (
             1.0 if verification.is_valid and verification.reaches_target else 0.0
         )
+        cleaned = "<clean>" in response.lower()
         valid += int(verification.is_valid)
         correct += int(verification.is_valid and verification.reaches_target)
         total_score += score
+        if cleaned:
+            cleaned_count += 1
+            cleaned_score_total += score
         per_example.append(
             {
                 "source_id": sample.source_id,
@@ -60,6 +66,7 @@ def evaluate_countdown_outputs(
                 "reaches_target": verification.reaches_target,
                 "reason": verification.reason,
                 "score": score,
+                "cleaned": cleaned,
             }
         )
 
@@ -71,6 +78,8 @@ def evaluate_countdown_outputs(
         "accuracy": (correct / total) if total else 0.0,
         "valid_rate": (valid / total) if total else 0.0,
         "average_score": (total_score / total) if total else 0.0,
+        "clean_rate": (cleaned_count / total) if total else 0.0,
+        "score_when_cleaned": (cleaned_score_total / cleaned_count) if cleaned_count else 0.0,
         "results": per_example,
     }
 

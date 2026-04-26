@@ -428,6 +428,7 @@ def evaluate_rollout_candidates(rollouts: Sequence[RolloutCandidate]) -> Dict[st
     valid = 0
     total_score = 0.0
     cleaned = 0
+    cleaned_score_total = 0.0
     results = []
 
     for rollout in rollouts:
@@ -437,6 +438,8 @@ def evaluate_rollout_candidates(rollouts: Sequence[RolloutCandidate]) -> Dict[st
         valid += int(verification.is_valid)
         total_score += score
         cleaned += int(rollout.cleaned)
+        if rollout.cleaned:
+            cleaned_score_total += score
         results.append(
             {
                 "source_id": rollout.sample.source_id,
@@ -462,6 +465,7 @@ def evaluate_rollout_candidates(rollouts: Sequence[RolloutCandidate]) -> Dict[st
         "valid_rate": (valid / total) if total else 0.0,
         "average_score": (total_score / total) if total else 0.0,
         "clean_rate": (cleaned / total) if total else 0.0,
+        "score_when_cleaned": (cleaned_score_total / cleaned) if cleaned else 0.0,
         "results": results,
     }
 
