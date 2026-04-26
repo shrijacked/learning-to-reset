@@ -31,6 +31,12 @@ The repository currently covers three core software primitives:
 - Per-example evaluation diagnostics that record the verifier-computed expression value
 - A comparison utility for raw one-pass versus reset-aware evaluation summaries
 - An opt-in verifier gate for retry-stage recovery examples during SFT artifact preparation
+- A multi-clean evaluation decoder (`--max-clean-tries N`) with verifier-aware first-correct early stop
+- `score_when_cleaned` and `clean_rate` metrics in the eval summary, aligned with paper Figure 6
+- A contamination guard on `failure_recovery_traces` that aborts mining when source IDs overlap a held-out slice
+- A Figure 7-style qualitative best/worst sample exporter (`scripts/export_qualitative_samples.py`)
+- A `--scale {pilot,paper}` preset on `paper_sources` and `prepare_paper_artifacts`
+- An end-to-end `scripts/replicate_paper.sh` pipeline with `--dry-run` smoke mode
 
 The repository now supports the baseline pipeline over prepared artifacts: fetch paper-aligned source files, prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is improving arithmetic grounding and scaling those real-source paths into stronger target-model runs.
 
@@ -45,6 +51,10 @@ The latest local pilot now exercises that path on real fetched Countdown prompts
 - `docs/extension-roadmap.md`: future direction for multi-step cleaning and memory-aware control
 - `docs/status-report.md`: completed work, missing engineering tasks, and non-engineering leftovers
 - `docs/team-summary.md`: short shareable snapshot for collaborators
+- `docs/paper-claims-traceability.md`: every `main.pdf` Section 3/4 claim mapped to the file and test that implements it
+- `docs/paper-replication.md`: hardware, wall-clock, expected hard-Countdown band, and verification checklist for the full paper-faithful run
+- `docs/grounded-recovery-results-2026-04-26.md`: arithmetic-grounded recovery experiment write-up
+- `docs/diagrams/end-to-end-pipeline.html`: post-Phase-A architecture diagram
 - `skills/learning-to-reset-research/SKILL.md`: repo-local working guide for future development
 
 ## Quick Start
@@ -158,7 +168,50 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.compare_eval_results \
   --output-dir output/eval/comparison
 ```
 
-Compare extension trajectories in code with `compare_extension_trajectories(...)`, then write JSON/Markdown artifacts with `write_extension_comparison_outputs(...)`.
+Compare extension trajectories in code with `compare_extension_trajectories(...)`, then write JSON/Markdown artifacts with `write_extension_comparison_outputs(...)`. From the CLI, score the `full_reset`, `selective_retention`, and `memory` controllers on the segments that an existing multi-clean eval already produced:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python scripts/run_extension_comparison.py \
+  --prepared-countdown output/prepared/countdown-test-hard.jsonl \
+  --results-jsonl output/eval/multi-clean-3/results.jsonl \
+  --output-dir output/eval/extensions \
+  --max-cleans 3
+```
+
+Run the verifier-aware multi-clean evaluator end-to-end (Figure 6 metrics):
+
+```bash
+PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.eval_runtime \
+  --prepared-countdown output/prepared/countdown-test-hard.jsonl \
+  --model output/checkpoints/sft \
+  --output-dir output/eval/multi-clean-3 \
+  --max-new-tokens 384 \
+  --max-clean-tries 3
+```
+
+Export Figure 7-style best/worst qualitative samples from any eval directory:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python scripts/export_qualitative_samples.py \
+  --eval-results output/eval/multi-clean-3/results.jsonl \
+  --output-path output/eval/multi-clean-3/qualitative.md
+```
+
+Drive the full paper-faithful pipeline (requires a 1B+ GPU; see `docs/paper-replication.md`):
+
+```bash
+PYTHON=python3 PYTHONPATH=src bash scripts/replicate_paper.sh \
+  --base-model Qwen/Qwen2.5-1.5B-Instruct \
+  --out-dir runs/replicate-paper-2026-04-26
+```
+
+Smoke-validate the same pipeline locally on Qwen 0.5B without any model run:
+
+```bash
+PYTHON=python3 PYTHONPATH=src bash scripts/replicate_paper.sh --dry-run \
+  --base-model Qwen/Qwen2.5-0.5B \
+  --out-dir /tmp/replicate-paper-dryrun
+```
 
 Run reset-aware RLOO on prepared Countdown prompts:
 

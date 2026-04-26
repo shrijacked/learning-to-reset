@@ -38,6 +38,15 @@ Implemented and verified:
 - deterministic hard Countdown eval slicing for multiplication/division-heavy comparison runs
 - arithmetic-grounded synthetic recovery traces with substep arithmetic, rejected hypothesis, number-budget audit, and final-value reconciliation, randomized by `rng_seed`
 - a deep-verify pipeline filter that re-checks every inline `a op b = c` claim before mined or synthetic recoveries enter SFT
+- a multi-clean evaluation decoder (`eval_runtime --max-clean-tries N`) with verifier-aware first-correct early stop
+- `score_when_cleaned` and `clean_rate` summary metrics that align reset-aware reporting with paper Figure 6
+- a contamination guard on `failure_recovery_traces` that aborts mining when source IDs overlap a held-out slice
+- a Figure 7-style qualitative best/worst sample exporter (`scripts/export_qualitative_samples.py`)
+- `--scale {pilot,paper}` presets on `paper_sources` and `prepare_paper_artifacts` (paper preset matches Section 4.1 settings)
+- an end-to-end `scripts/replicate_paper.sh` pipeline with a `--dry-run` smoke mode and a `LTR_REPLICATE_DRY_RUN`-gated subprocess test
+- a controller-comparison runner (`scripts/run_extension_comparison.py`) that scores `full_reset`, `selective_retention`, and `memory` on identical multi-clean eval segments
+- a paper-claim traceability document mapping every `main.pdf` Section 3/4 claim to its file and test
+- a paper-replication runbook covering hardware, wall-clock, expected hard-Countdown band, and verification checks
 - GitHub repository setup and CI for the test suite
 
 ## Working Baseline
@@ -128,6 +137,9 @@ Observed pilot outcome:
 - a second 32-example hard slice (`seed = 131`) scored `28/32` valid and `0/32` correct under reset-aware retry, ruling out a one-off fluke on the original holdout
 - a grounded-only ablation (`569` train / `64` validation examples) trained to `tmp/paper-runs/sft-grounded-only-26apr/`; at `max_new_tokens = 384` reset-aware eval reached `31/32` valid and `0/32` correct — the model completes the grounded template but fabricates substep arithmetic (see `docs/grounded-recovery-results-2026-04-26.md`)
 - the plus-mined baseline was re-evaluated at `max_new_tokens = 384` and stayed `1/32` correct, so the token budget is not the primary limiter for the `1/32` bar
+- the grounded SFT checkpoint (`tmp/paper-runs/sft-grounded-26apr/`) was re-evaluated at `max_new_tokens = 384` with `--max-clean-tries 3` on both holdouts: fresh-32 stayed `0/32` correct with `clean_rate = 1.0` and `score_when_cleaned = 0.094`, and the `seed = 131` slice stayed `0/32` correct with `clean_rate = 1.0` and `score_when_cleaned = 0.088`; the multi-clean decoder alone does not raise the `1/32` bar at the 0.5B scale
+- a controller comparison on the same fresh-32 multi-clean segments found `full_reset`, `selective_retention`, and `memory` all tied at `mean_adjusted_reward ≈ 0.05` because the underlying segments themselves never reach the target — a controller swap on identical generations cannot beat the substep-fabrication ceiling
+- a third hard slice (`seed = 219`, `tmp/paper-artifacts-grounded-26apr-seed219/countdown-test-hard.jsonl`) was generated with renamespaced `seed219-synthetic:N` source IDs to keep it disjoint from fresh-32 and `seed = 131`; its raw baseline eval against the existing grounded SFT scored `0/32` correct, `0/32` valid, and `clean_rate = 1.0`, and the contamination-guarded mining pass produced `62` solver-verified recovery traces written to `tmp/paper-assets-grounded-26apr-seed219/mined-recoveries-grounded.jsonl`
 
 Interpretation:
 
