@@ -234,9 +234,9 @@ if [[ -f "$EXTENSION_SCRIPT" ]]; then
     check_cli "run_extension_comparison" "$PYTHON" "$EXTENSION_SCRIPT"
     run_cmd "$PYTHON" "$EXTENSION_SCRIPT" \
         --prepared-countdown "$ARTIFACTS_DIR/countdown-test-hard.jsonl" \
-        --model "$RLOO_DIR" \
+        --results-jsonl "$EVAL_FINAL_DIR/results.jsonl" \
         --output-dir "$EXTENSIONS_DIR" \
-        --max-new-tokens 384
+        --max-cleans "$MAX_CLEAN_TRIES"
 else
     log "skip step 9: $EXTENSION_SCRIPT not yet present (added in B3)."
 fi
