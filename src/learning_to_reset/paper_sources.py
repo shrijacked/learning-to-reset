@@ -19,6 +19,48 @@ DEFAULT_COUNTDOWN_EVAL_DATASET_ID = "obiwan96/countdown-env-eval"
 DEFAULT_REFERENCE_TRACE_DATASET_ID = "obiwan96/owm-cog-behaviors"
 DEFAULT_REFERENCE_TRACE_SPLIT = "train"
 
+
+SCALE_PRESETS: Dict[str, Dict[str, Optional[int]]] = {
+    "pilot": {
+        "max_train_rows": 64,
+        "max_eval_rows": 64,
+        "max_train_samples": 256,
+        "max_eval_samples": 256,
+        "max_reference_trace_rows": 64,
+    },
+    "paper": {
+        "max_train_rows": None,
+        "max_eval_rows": None,
+        "max_train_samples": None,
+        "max_eval_samples": None,
+        "max_reference_trace_rows": None,
+    },
+}
+
+
+def apply_scale_preset(
+    *,
+    scale: str,
+    overrides: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """Fill in any missing scale knob with its preset value.
+
+    Explicit CLI overrides win: if ``overrides[key]`` is not ``None`` it is
+    kept verbatim. If ``overrides[key]`` is ``None`` the preset value is
+    substituted. Unknown keys in ``overrides`` are passed through unchanged.
+    """
+
+    if scale not in SCALE_PRESETS:
+        raise ValueError(
+            f"Unknown scale preset {scale!r}. Choose from {sorted(SCALE_PRESETS)!r}."
+        )
+    preset = SCALE_PRESETS[scale]
+    configured: Dict[str, Any] = dict(overrides)
+    for key, preset_value in preset.items():
+        if configured.get(key) is None:
+            configured[key] = preset_value
+    return configured
+
 BEHAVIOR_QUERY_PATTERN = re.compile(r"User:\s*(.*?)\nAssistant:", re.DOTALL)
 COUNTDOWN_USER_PATTERN = re.compile(
     r"Using the numbers\s*\[(.*?)\],\s*create an equation that equals\s*(-?\d+)\.?",
@@ -340,6 +382,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Reference trace split name.",
     )
     parser.add_argument("--output-dir", required=True, help="Directory for local JSONL source files.")
+    parser.add_argument(
+        "--scale",
+        choices=sorted(SCALE_PRESETS),
+        default="pilot",
+        help=(
+            "Dataset scale preset. 'pilot' (default) caps every fetch for "
+            "local CPU/MPS use; 'paper' lifts all caps to fetch the full "
+            "Section 4.1 dataset for paper replication."
+        ),
+    )
     parser.add_argument("--max-train-rows", type=int, help="Optional train row limit for quick experiments.")
     parser.add_argument("--max-eval-rows", type=int, help="Optional eval row limit for quick experiments.")
     parser.add_argument(
@@ -354,18 +406,29 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = build_parser().parse_args(argv)
+    configured = apply_scale_preset(
+        scale=args.scale,
+        overrides={
+            "max_train_rows": args.max_train_rows,
+            "max_eval_rows": args.max_eval_rows,
+            "max_train_samples": args.max_train_samples,
+            "max_eval_samples": args.max_eval_samples,
+            "max_reference_trace_rows": args.max_reference_trace_rows,
+        },
+    )
     summary = fetch_paper_source_bundle(
         output_dir=args.output_dir,
         countdown_train_dataset=args.countdown_train_dataset,
         countdown_eval_dataset=args.countdown_eval_dataset,
         reference_trace_dataset=args.reference_trace_dataset,
         reference_trace_split=args.reference_trace_split,
-        max_train_rows=args.max_train_rows,
-        max_eval_rows=args.max_eval_rows,
-        max_reference_trace_rows=args.max_reference_trace_rows,
-        max_train_samples=args.max_train_samples,
-        max_eval_samples=args.max_eval_samples,
+        max_train_rows=configured["max_train_rows"],
+        max_eval_rows=configured["max_eval_rows"],
+        max_reference_trace_rows=configured["max_reference_trace_rows"],
+        max_train_samples=configured["max_train_samples"],
+        max_eval_samples=configured["max_eval_samples"],
     )
+    summary["scale"] = args.scale
     print(json.dumps(summary, indent=2, ensure_ascii=True))
     return 0
 
