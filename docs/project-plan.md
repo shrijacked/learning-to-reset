@@ -56,6 +56,7 @@ flowchart LR
 | R13 | Export a deterministic hard Countdown eval slice | `main.pdf` Section 4.3.1 | `countdown_slices.py`, `paper_dataset_prep.py` | `tests/test_countdown_slices.py`, `tests/test_paper_dataset_prep.py` |
 | R14 | Generate hard-focused Countdown source prompts | `main.pdf` Section 4.3.1 | `synthetic_countdown_dataset.py` | `tests/test_synthetic_countdown_dataset.py` |
 | R15 | Mine failed hard evals into verified recovery traces | `main.pdf` Section 3.2.2, Section 4.3.1 | `failure_recovery_traces.py` | `tests/test_failure_recovery_traces.py` |
+| R16 | Arithmetic-grounded recovery template + deep-verify filter | `main.pdf` Section 3.2.2, Section 4.3 | `synthetic_countdown_traces.build_grounded_recovery_response`, `pipeline._deep_verify_recovery_text` | `tests/test_synthetic_countdown_traces.py` (grounded suite), `tests/test_failure_recovery_traces.py::test_grounded_recovery_style_propagates_through_failure_mining`, `tests/test_pipeline.py::test_require_target_correct_recovery_drops_inconsistent_arithmetic_claims`, `docs/grounded-recovery-results-2026-04-26.md` |
 | E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | `memory_extension.py` | `tests/test_memory_extension.py` |
@@ -79,7 +80,8 @@ flowchart LR
 - Hard-focused SFT and reset-aware RLOO have both run locally, but neither produced target-correct answers on the held-out hard slice
 - Failed hard evals can now be mined into solver-verified recovery traces for the next training cycle
 - Plus-mined SFT has been evaluated on a fresh 32-example hard holdout with `29/32` valid and `1/32` correct under reset-aware retry
-- Remaining baseline work is stronger arithmetic grounding, larger target-model execution, and broader experiment comparison
+- An arithmetic-grounded recovery template (R16) and a deep-verify pipeline filter have been added; reset-aware eval on the same 32-example fresh hard holdout reaches `30/32` valid and `0/32` correct, and a grounded-only ablation reaches `31/32` valid and `0/32` correct at 384 generation tokens — the model adopts the new template but fabricates substep arithmetic, so the `1/32` ceiling has not yet been beaten at the Qwen2.5-0.5B scale (see `docs/grounded-recovery-results-2026-04-26.md`)
+- Remaining baseline work is step-level verifier-in-the-loop reward, larger target-model execution, and broader experiment comparison
 
 ### Extension
 

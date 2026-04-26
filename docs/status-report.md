@@ -36,6 +36,8 @@ Implemented and verified:
 - a recovery-balance control for repeating retry-stage examples during fallback dataset prep
 - an opt-in verifier gate that keeps only target-correct retry-stage recovery examples when Countdown metadata is available
 - deterministic hard Countdown eval slicing for multiplication/division-heavy comparison runs
+- arithmetic-grounded synthetic recovery traces with substep arithmetic, rejected hypothesis, number-budget audit, and final-value reconciliation, randomized by `rng_seed`
+- a deep-verify pipeline filter that re-checks every inline `a op b = c` claim before mined or synthetic recoveries enter SFT
 - GitHub repository setup and CI for the test suite
 
 ## Working Baseline
@@ -63,7 +65,7 @@ What works today:
 - the repo can synthesize Countdown-aligned fallback traces locally when a stronger trace source is unavailable
 - the repo can force synthetic Countdown source generation onto hard multiplication/division-heavy prompts
 - the repo can mine failed hard eval outputs into solver-verified recovery traces for the next SFT cycle
-- the synthetic trace generator can emit walkthrough, verifier-grounded, and contrastive recovery styles for the same solved prompt
+- the synthetic trace generator can emit walkthrough, verifier-grounded, contrastive, and arithmetic-grounded (`grounded`) recovery styles for the same solved prompt
 - raw one-pass and reset-aware evaluation summaries can be compared with a repeatable CLI utility
 - the target Qwen model can complete local SFT checkpoints and reset-aware RL checkpoints on pilot subsets
 - evaluation can load trainer output roots directly even when the actual model lives inside `best-checkpoint` or `final-checkpoint`
@@ -118,6 +120,14 @@ Observed pilot outcome:
 - plus-mined SFT completed on the fresh-holdout artifact set with `train_loss = 0.0575` and `eval_loss = 0.1096`
 - plus-mined SFT raw one-pass decoding on the fresh hard holdout scored `0/32` valid and `0/32` correct
 - plus-mined SFT reset-aware retry on the fresh hard holdout scored `29/32` valid, `1/32` correct, `average_score = 0.13125`, and `clean_rate = 1.0`
+- arithmetic-grounded recovery (R16) shipped in code: `build_grounded_recovery_response`, `grounded` in `RecoveryStyle` / CLIs, and `pipeline._deep_verify_recovery_text` when `--require-recovery-target-correct` is set (132 unit tests green)
+- a grounded-plus-mined artifact set was prepared from the same hard-focused train source as the plus-mined baseline plus 15 non-contaminated mined recoveries (`1736` train / `193` validation SFT examples in `tmp/paper-artifacts-grounded-26apr/`)
+- SFT on `Qwen/Qwen2.5-0.5B` over that set completed to `tmp/paper-runs/sft-grounded-26apr/` with `train_loss ≈ 0.0903`
+- reset-aware eval on the same 32-example fresh hard holdout scored `30/32` valid and `0/32` correct at `max_new_tokens = 128`; re-eval at `384` tokens was unchanged (`0/32` correct)
+- raw one-pass on that holdout stayed `0/32` valid and `0/32` correct
+- a second 32-example hard slice (`seed = 131`) scored `28/32` valid and `0/32` correct under reset-aware retry, ruling out a one-off fluke on the original holdout
+- a grounded-only ablation (`569` train / `64` validation examples) trained to `tmp/paper-runs/sft-grounded-only-26apr/`; at `max_new_tokens = 384` reset-aware eval reached `31/32` valid and `0/32` correct — the model completes the grounded template but fabricates substep arithmetic (see `docs/grounded-recovery-results-2026-04-26.md`)
+- the plus-mined baseline was re-evaluated at `max_new_tokens = 384` and stayed `1/32` correct, so the token budget is not the primary limiter for the `1/32` bar
 
 Interpretation:
 
@@ -132,13 +142,14 @@ Interpretation:
 - the mined recovery records are useful for the next training cycle, but they must be evaluated against a fresh hard holdout because they were derived from the current hard failures
 - the fresh hard holdout shows a small target-correct improvement, but most retry responses still state false verified equations, so arithmetic verification is still the main blocker
 - the main remaining baseline blocker is arithmetic grounding: the model often writes plausible step-by-step claims, but the verifier-computed expression value does not match the target
+- the grounded recovery template increases structural supervision (substeps, rejected hypothesis, budget, final check) but at Qwen2.5-0.5B the model still copies the shape while lying on intermediate `Compute` lines; deep-verify cleans training data but cannot fix inference-time fabrication — the next bet is step-level verifier reward or a larger model, not another passive template tweak alone
 - the first extension module remains separate from the baseline path, so future multi-clean work can proceed without destabilizing the one-shot baseline
 - the second extension module now supports explicit retained notes after clean, while still avoiding full scratchpad carryover
 - the recall-aware memory module now provides a runnable external-memory clean-loop baseline for future extension experiments
 
 ## Remaining Engineering Work
 
-1. Improve recovery supervision so the model checks expression values instead of copying the “verified candidate” form.
+1. Improve recovery supervision with step-level verifier reward (or similar) so intermediate `Compute` claims cannot be fabricated without penalty; passive templates alone did not beat the `1/32` hard-holdout bar at 0.5B.
 2. Add or fetch a stronger Countdown-native expert-trace source with verified target-correct hard recoveries.
 3. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
 4. Re-run reset-aware RLOO after the SFT checkpoint produces more than sparse target-correct hard retries.
