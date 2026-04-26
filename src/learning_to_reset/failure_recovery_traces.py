@@ -5,7 +5,19 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Literal, Mapping, Optional, Sequence, Tuple
+from typing import (
+    Any,
+    Dict,
+    FrozenSet,
+    Iterable,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+)
 
 from learning_to_reset.countdown_solver import solve_countdown_variants
 from learning_to_reset.countdown_verifier import verify_countdown_expression
@@ -181,8 +193,14 @@ def build_failure_recovery_trace_records(
     *,
     max_solutions_per_failure: int = 1,
     recovery_style: RecoveryStyle = "contrastive",
+    excluded_source_ids: Optional[Iterable[str]] = None,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-    """Build solver-verified recovery trace records from failed eval outputs."""
+    """Build solver-verified recovery trace records from failed eval outputs.
+
+    ``excluded_source_ids`` is a contamination guard. If any failure result's
+    source_id appears in the set, mining aborts with a ``ValueError`` rather
+    than silently leaking the prompt into the SFT corpus.
+    """
 
     examples_by_source_id = {
         str(example.metadata.get("source_id")): example
@@ -191,13 +209,35 @@ def build_failure_recovery_trace_records(
     }
     recovery_styles = _recovery_styles_for(recovery_style)
 
+    excluded: FrozenSet[str] = frozenset(
+        str(source_id) for source_id in (excluded_source_ids or ())
+    )
+    failure_results_list = list(failure_results)
+    if excluded:
+        overlap = sorted(
+            {
+                str(result.get("source_id"))
+                for result in failure_results_list
+                if result.get("source_id") not in (None, "")
+                and str(result.get("source_id")) in excluded
+            }
+        )
+        if overlap:
+            preview = ", ".join(overlap[:5])
+            suffix = "" if len(overlap) <= 5 else f" (and {len(overlap) - 5} more)"
+            raise ValueError(
+                "Failure mining contamination detected: "
+                f"{len(overlap)} eval source_ids overlap the exclusion set: "
+                f"{preview}{suffix}. Mining aborted to keep the holdout clean."
+            )
+
     records: List[Dict[str, Any]] = []
     failures_seen = 0
     skipped_solved_or_valid = 0
     skipped_missing_example = 0
     skipped_unsolved = 0
 
-    for result in failure_results:
+    for result in failure_results_list:
         source_id = result.get("source_id")
         if source_id in (None, ""):
             skipped_missing_example += 1
@@ -273,8 +313,35 @@ def build_failure_recovery_trace_records(
         "skipped_unsolved": skipped_unsolved,
         "max_solutions_per_failure": max_solutions_per_failure,
         "recovery_style": recovery_style,
+        "excluded_source_ids": len(excluded),
     }
     return records, summary
+
+
+def _load_source_ids_from_jsonl(path: str | Path) -> Set[str]:
+    """Read a prepared/eval JSONL and return the set of source_ids it contains."""
+
+    source = Path(path)
+    if not source.exists():
+        raise ValueError(f"Exclusion file does not exist: {source}")
+
+    found: Set[str] = set()
+    for line in source.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"Could not parse JSONL line in exclusion file {source}: {exc}"
+            ) from exc
+        candidate = record.get("source_id")
+        if candidate in (None, ""):
+            metadata = record.get("metadata") or {}
+            candidate = metadata.get("source_id")
+        if candidate not in (None, ""):
+            found.add(str(candidate))
+    return found
 
 
 def generate_failure_recovery_trace_corpus(
@@ -284,19 +351,35 @@ def generate_failure_recovery_trace_corpus(
     output_path: str | Path,
     max_solutions_per_failure: int = 1,
     recovery_style: RecoveryStyle = "contrastive",
+    exclude_source_id_paths: Optional[Sequence[str | Path]] = None,
 ) -> Dict[str, Any]:
-    """Write mined recovery traces from a prepared Countdown file and eval results."""
+    """Write mined recovery traces from a prepared Countdown file and eval results.
+
+    ``exclude_source_id_paths`` lists prepared JSONL files whose ``source_id``
+    fields must NOT appear in the eval results being mined; if any do, mining
+    aborts with ``ValueError``. This is the contamination guard for keeping
+    held-out hard slices clean.
+    """
 
     examples = load_prepared_examples(prepared_countdown_path)
     results = _read_jsonl_records(eval_results_path)
+
+    excluded_source_ids: Set[str] = set()
+    for excl_path in exclude_source_id_paths or ():
+        excluded_source_ids.update(_load_source_ids_from_jsonl(excl_path))
+
     records, summary = build_failure_recovery_trace_records(
         examples,
         results,
         max_solutions_per_failure=max_solutions_per_failure,
         recovery_style=recovery_style,
+        excluded_source_ids=excluded_source_ids,
     )
     write_jsonl_records(records, output_path)
     summary["output_path"] = str(output_path)
+    summary["exclude_source_id_paths"] = [
+        str(path) for path in (exclude_source_id_paths or ())
+    ]
     Path(output_path).with_suffix(".summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=True) + "\n",
         encoding="utf-8",
@@ -342,6 +425,16 @@ def build_parser() -> argparse.ArgumentParser:
         default="contrastive",
         help="Recovery response style to generate.",
     )
+    parser.add_argument(
+        "--exclude-source-ids",
+        action="append",
+        default=[],
+        help=(
+            "Path to a prepared Countdown JSONL whose source_ids must NOT "
+            "appear in the eval results being mined. May be passed multiple "
+            "times. Aborts mining on overlap to keep holdout slices clean."
+        ),
+    )
     return parser
 
 
@@ -353,6 +446,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         output_path=args.output_path,
         max_solutions_per_failure=args.max_solutions_per_failure,
         recovery_style=args.recovery_style,
+        exclude_source_id_paths=args.exclude_source_ids,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=True))
     return 0
