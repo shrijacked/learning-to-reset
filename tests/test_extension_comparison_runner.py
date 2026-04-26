@@ -210,9 +210,9 @@ class RunOnFilesIntegrationTests(unittest.TestCase):
                 output_dir=str(output_dir),
                 max_cleans=2,
             )
-        self.assertEqual(summary["total_examples"], 1)
-        self.assertTrue((output_dir / "extension-comparison.json").exists())
-        self.assertTrue((output_dir / "extension-comparison.md").exists())
+            self.assertEqual(summary["total_examples"], 1)
+            self.assertTrue((output_dir / "extension-comparison.json").exists())
+            self.assertTrue((output_dir / "extension-comparison.md").exists())
 
 
 if __name__ == "__main__":
