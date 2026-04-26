@@ -179,6 +179,59 @@ class RLOORuntimeTests(unittest.TestCase):
 
         self.assertEqual(summary["results"][0]["value"], "21")
 
+    def test_evaluate_rollout_candidates_reports_score_when_cleaned(self) -> None:
+        cleaned = build_rollout_candidate(
+            type(
+                "PromptExampleStub",
+                (),
+                {
+                    "prompt": build_reasoning_prompt(
+                        "Reach 68 using 60, 27, 19.", allow_clean=True
+                    ),
+                    "response": "",
+                    "metadata": {
+                        "source_id": "c1",
+                        "numbers": (60, 27, 19),
+                        "target": 68,
+                        "question": "Reach 68 using 60, 27, 19.",
+                    },
+                },
+            )(),
+            initial_response="<think>Confusing.</think><clean>",
+            initial_token_ids=(1, 2, 3),
+            retry_response="<think>Fresh.</think><answer>(60 + 27) - 19</answer>",
+            retry_token_ids=(4, 5, 6),
+        )
+        direct = build_rollout_candidate(
+            type(
+                "PromptExampleStub",
+                (),
+                {
+                    "prompt": build_reasoning_prompt(
+                        "Reach 24 using 9, 8, 3, 1.", allow_clean=True
+                    ),
+                    "response": "",
+                    "metadata": {
+                        "source_id": "c2",
+                        "numbers": (9, 8, 3, 1),
+                        "target": 24,
+                        "question": "Reach 24 using 9, 8, 3, 1.",
+                    },
+                },
+            )(),
+            initial_response="<think>Wrong.</think><answer>9 + 8 + 3 + 1</answer>",
+            initial_token_ids=(1, 2, 3),
+        )
+
+        summary = evaluate_rollout_candidates((cleaned, direct))
+
+        self.assertIn("score_when_cleaned", summary)
+        self.assertGreater(summary["score_when_cleaned"], 0.0)
+        self.assertAlmostEqual(
+            summary["score_when_cleaned"],
+            cleaned.clean_trajectory.final_reward.total_reward,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
