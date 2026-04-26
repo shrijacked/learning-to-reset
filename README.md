@@ -189,6 +189,8 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.eval_runtime \
   --max-clean-tries 3
 ```
 
+If accuracy is stuck at zero but `average_score` or `score_when_cleaned` hovers around **0.1**, the model is usually emitting **legal** `<answer>` expressions that simply **miss the target** (scoring gives 0.1 partial credit for validity + 1.0 only when correct). For retries, add **`--verifier-feedback`** so each post-`<clean>` prompt includes the verifier’s computed value vs target; that is stronger than re-sending the same bare question and is the first decode-time lever to try before larger models or RLOO shaped on verifier reward.
+
 Export Figure 7-style best/worst qualitative samples from any eval directory:
 
 ```bash

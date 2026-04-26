@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from learning_to_reset.context_manager import response_requests_clean_retry
-from learning_to_reset.countdown_verifier import score_countdown_response
+from learning_to_reset.countdown_verifier import VerificationResult, score_countdown_response
 from learning_to_reset.data import CountdownSample
 from learning_to_reset.model_resolver import resolve_model_name_or_path
 from learning_to_reset.prompts import PromptExample, parse_reasoning_prompt
@@ -91,12 +91,40 @@ def _build_retry_prompt(example: PromptExample) -> str:
     return "\n\n".join(piece for piece in pieces if piece)
 
 
+def format_verifier_feedback(verification: VerificationResult, sample: CountdownSample) -> str:
+    """Build a short block appended to retry prompts with external arithmetic truth.
+
+    This is a decode-time hint: it does not change how ``<answer>`` is scored, but
+    gives the model an explicit value-vs-target signal after a failed segment.
+    """
+
+    nums = ", ".join(str(n) for n in sample.numbers)
+    if not verification.is_valid:
+        return (
+            "Verifier feedback: the last response could not be scored as a legal Countdown "
+            f"answer ({verification.reason}) Target is {sample.target} using numbers [{nums}]. "
+            "Reply with a single arithmetic expression inside <answer> that uses each given "
+            "number at most once, then stop or use <clean> only if you must reset again."
+        )
+    if verification.value is not None:
+        return (
+            "Verifier feedback: your last <answer> expression evaluates to "
+            f"{verification.value}, but the target is {sample.target}. "
+            f"Numbers (each at most once): [{nums}]. Revise the expression inside <answer>."
+        )
+    return (
+        f"Verifier feedback: target is {sample.target}, numbers [{nums}]. "
+        "Provide a corrected expression inside <answer>."
+    )
+
+
 def run_multi_clean_eval_loop(
     examples: Sequence[PromptExample],
     *,
     generator: Callable[[str, bool], str],
     max_clean_tries: int,
     clean_token: str = "<clean>",
+    verifier_feedback: bool = False,
 ) -> Dict[str, Any]:
     """Evaluate examples with verifier-aware multi-clean retry decoding.
 
@@ -107,6 +135,10 @@ def run_multi_clean_eval_loop(
     budget remains, a retry prompt is built and the next segment is
     generated. The very last segment under the budget is generated with
     ``allow_clean=False`` to force the model to commit to an answer.
+
+    When ``verifier_feedback`` is true, each retry prompt appends a compact
+    verifier summary (computed value vs target, or invalid reason) so the
+    model is not blindly re-prompted with the same question alone.
     """
 
     if max_clean_tries < 1:
@@ -155,7 +187,10 @@ def run_multi_clean_eval_loop(
                 break
 
             clean_count += 1
-            prompt = retry_prompt
+            if verifier_feedback:
+                prompt = f"{retry_prompt}\n\n{format_verifier_feedback(verification, sample)}"
+            else:
+                prompt = retry_prompt
             allow_clean = clean_count < max_clean_tries
 
         budget_exhausted = winning_index is None and clean_count >= max_clean_tries
@@ -204,6 +239,7 @@ def run_multi_clean_eval_loop(
         "clean_rate": (cleaned_count / total) if total else 0.0,
         "score_when_cleaned": (cleaned_score_total / cleaned_count) if cleaned_count else 0.0,
         "max_clean_tries": max_clean_tries,
+        "verifier_feedback": verifier_feedback,
         "results": per_example,
     }
 
@@ -269,6 +305,7 @@ def evaluate_with_multi_clean_decoder(
     top_p: float = 1.0,
     max_clean_tries: int = 1,
     device: str = "auto",
+    verifier_feedback: bool = False,
 ) -> Dict[str, Any]:
     """Evaluate with verifier-aware multi-clean retry decoding."""
 
@@ -305,6 +342,7 @@ def evaluate_with_multi_clean_decoder(
         examples,
         generator=generator,
         max_clean_tries=max_clean_tries,
+        verifier_feedback=verifier_feedback,
     )
     summary["device"] = selected_device
     summary["model"] = resolved_model_path
@@ -352,6 +390,15 @@ def build_parser() -> argparse.ArgumentParser:
             "path; values >= 2 enable the verifier-aware multi-clean decoder."
         ),
     )
+    parser.add_argument(
+        "--verifier-feedback",
+        action="store_true",
+        help=(
+            "With --max-clean-tries >= 2, append verifier truth (evaluated value vs "
+            "target, or invalid reason) to each retry prompt after <clean>. "
+            "Improves retry signal; not part of the original paper baseline."
+        ),
+    )
     return parser
 
 
@@ -373,6 +420,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             max_new_tokens=args.max_new_tokens,
             temperature=args.temperature,
             max_clean_tries=args.max_clean_tries,
+            verifier_feedback=args.verifier_feedback,
         )
     else:
         from learning_to_reset.rloo_runtime import evaluate_reset_aware_model

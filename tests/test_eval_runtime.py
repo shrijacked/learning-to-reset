@@ -1,8 +1,12 @@
 import unittest
 
+from learning_to_reset.countdown_verifier import VerificationResult
+from learning_to_reset.data import CountdownSample
 from learning_to_reset.eval_runtime import (
+    _build_retry_prompt,
     build_countdown_sample_from_example,
     evaluate_countdown_outputs,
+    format_verifier_feedback,
     run_multi_clean_eval_loop,
 )
 from learning_to_reset.prompts import PromptExample, build_reasoning_prompt
@@ -215,6 +219,79 @@ class MultiCleanEvalLoopTests(unittest.TestCase):
             run_multi_clean_eval_loop(
                 (example,), generator=generator, max_clean_tries=0
             )
+
+    def test_verifier_feedback_appends_truth_to_retry_prompt(self) -> None:
+        example = _build_reach_50_example()
+        prompts: list[str] = []
+        scripted = iter(
+            [
+                "<t></t><answer>25 + 7</answer><clean>",
+                "<t></t><answer>25 * 2</answer>",
+            ]
+        )
+
+        def generator(prompt: str, allow_clean: bool) -> str:
+            prompts.append(prompt)
+            return next(scripted)
+
+        summary = run_multi_clean_eval_loop(
+            (example,),
+            generator=generator,
+            max_clean_tries=1,
+            verifier_feedback=True,
+        )
+
+        self.assertEqual(len(prompts), 2)
+        self.assertIn("Verifier feedback", prompts[1])
+        self.assertIn("evaluates to 32", prompts[1])
+        self.assertIn("50", prompts[1])
+        self.assertEqual(summary["correct"], 1)
+        self.assertTrue(summary["verifier_feedback"])
+
+    def test_verifier_feedback_false_preserves_plain_retry_prompt(self) -> None:
+        example = _build_reach_50_example()
+        base = _build_retry_prompt(example)
+        prompts: list[str] = []
+        scripted = iter(
+            [
+                "<t></t><answer>25 + 7</answer><clean>",
+                "<t></t><answer>25 * 2</answer>",
+            ]
+        )
+
+        def generator(prompt: str, allow_clean: bool) -> str:
+            prompts.append(prompt)
+            return next(scripted)
+
+        run_multi_clean_eval_loop(
+            (example,),
+            generator=generator,
+            max_clean_tries=1,
+            verifier_feedback=False,
+        )
+
+        self.assertEqual(prompts[1], base)
+
+
+class VerifierFeedbackFormattingTests(unittest.TestCase):
+    def test_invalid_reason_wired_into_feedback_text(self) -> None:
+        sample = CountdownSample(
+            numbers=(2, 3),
+            target=6,
+            question="q",
+        )
+        vr = VerificationResult(
+            expression=None,
+            is_valid=False,
+            reaches_target=False,
+            used_numbers=(),
+            value=None,
+            reason="No <answer> block found in response.",
+        )
+        text = format_verifier_feedback(vr, sample)
+        self.assertIn("No <answer> block", text)
+        self.assertIn("6", text)
+        self.assertIn("2, 3", text)
 
 
 if __name__ == "__main__":
