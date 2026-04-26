@@ -5,12 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
+from learning_to_reset.context_manager import response_requests_clean_retry
 from learning_to_reset.countdown_verifier import score_countdown_response
 from learning_to_reset.data import CountdownSample
 from learning_to_reset.model_resolver import resolve_model_name_or_path
-from learning_to_reset.prompts import PromptExample
+from learning_to_reset.prompts import PromptExample, parse_reasoning_prompt
 from learning_to_reset.sft_runtime import load_prepared_examples
 
 
@@ -84,6 +85,129 @@ def evaluate_countdown_outputs(
     }
 
 
+def _build_retry_prompt(example: PromptExample) -> str:
+    parts = parse_reasoning_prompt(example.prompt)
+    pieces = [parts.base_instructions.strip(), f"Question: {parts.question}"]
+    return "\n\n".join(piece for piece in pieces if piece)
+
+
+def run_multi_clean_eval_loop(
+    examples: Sequence[PromptExample],
+    *,
+    generator: Callable[[str, bool], str],
+    max_clean_tries: int,
+    clean_token: str = "<clean>",
+) -> Dict[str, Any]:
+    """Evaluate examples with verifier-aware multi-clean retry decoding.
+
+    The first segment is generated against the original prompt with
+    ``allow_clean=True``. After each segment, the response is verified; the
+    first segment to reach the target wins, regardless of any subsequent
+    cleans the model might still emit. If the segment requests a clean and
+    budget remains, a retry prompt is built and the next segment is
+    generated. The very last segment under the budget is generated with
+    ``allow_clean=False`` to force the model to commit to an answer.
+    """
+
+    if max_clean_tries < 1:
+        raise ValueError("max_clean_tries must be >= 1.")
+
+    per_example: List[Dict[str, Any]] = []
+    correct = 0
+    valid = 0
+    total_score = 0.0
+    cleaned_count = 0
+    cleaned_score_total = 0.0
+
+    for example in examples:
+        sample = build_countdown_sample_from_example(example)
+        retry_prompt = _build_retry_prompt(example)
+        segments: List[Dict[str, Any]] = []
+        clean_count = 0
+        winning_index: Optional[int] = None
+
+        prompt = example.prompt
+        allow_clean = True
+        for _attempt in range(max_clean_tries + 1):
+            response = generator(prompt, allow_clean)
+            verification = score_countdown_response(response, sample)
+            requested_clean = response_requests_clean_retry(
+                response, clean_token=clean_token
+            )
+            segments.append(
+                {
+                    "prompt": prompt,
+                    "response": response,
+                    "is_valid": verification.is_valid,
+                    "reaches_target": verification.reaches_target,
+                    "requested_clean": requested_clean,
+                }
+            )
+
+            if verification.is_valid and verification.reaches_target:
+                winning_index = len(segments) - 1
+                break
+
+            if not requested_clean:
+                break
+
+            if clean_count >= max_clean_tries:
+                break
+
+            clean_count += 1
+            prompt = retry_prompt
+            allow_clean = clean_count < max_clean_tries
+
+        budget_exhausted = winning_index is None and clean_count >= max_clean_tries
+
+        final = segments[winning_index] if winning_index is not None else segments[-1]
+        final_response = final["response"]
+        verification = score_countdown_response(final_response, sample)
+        score = (0.1 if verification.is_valid else 0.0) + (
+            1.0 if verification.is_valid and verification.reaches_target else 0.0
+        )
+        any_cleaned = any(segment["requested_clean"] for segment in segments)
+        valid += int(verification.is_valid)
+        correct += int(verification.is_valid and verification.reaches_target)
+        total_score += score
+        if any_cleaned:
+            cleaned_count += 1
+            cleaned_score_total += score
+
+        per_example.append(
+            {
+                "source_id": sample.source_id,
+                "prompt": example.prompt,
+                "response": final_response,
+                "expression": verification.expression,
+                "value": str(verification.value) if verification.value is not None else None,
+                "is_valid": verification.is_valid,
+                "reaches_target": verification.reaches_target,
+                "reason": verification.reason,
+                "score": score,
+                "cleaned": any_cleaned,
+                "clean_count": clean_count,
+                "segment_count": len(segments),
+                "budget_exhausted": budget_exhausted,
+                "segments": segments,
+            }
+        )
+
+    total = len(examples)
+    return {
+        "total_examples": total,
+        "correct": correct,
+        "valid": valid,
+        "accuracy": (correct / total) if total else 0.0,
+        "valid_rate": (valid / total) if total else 0.0,
+        "average_score": (total_score / total) if total else 0.0,
+        "clean_rate": (cleaned_count / total) if total else 0.0,
+        "score_when_cleaned": (cleaned_score_total / cleaned_count) if cleaned_count else 0.0,
+        "max_clean_tries": max_clean_tries,
+        "results": per_example,
+    }
+
+
 def _require_transformers():
     try:
         import torch
@@ -136,6 +260,57 @@ def generate_countdown_responses(
     return responses
 
 
+def evaluate_with_multi_clean_decoder(
+    examples: Sequence[PromptExample],
+    *,
+    model_name_or_path: str,
+    max_new_tokens: int = 384,
+    temperature: float = 0.0,
+    top_p: float = 1.0,
+    max_clean_tries: int = 1,
+    device: str = "auto",
+) -> Dict[str, Any]:
+    """Evaluate with verifier-aware multi-clean retry decoding."""
+
+    from learning_to_reset.rloo_runtime import (
+        _generate_segment,
+        _prepare_tokenizer,
+        _require_transformers as _rloo_require,
+        _select_device,
+    )
+
+    torch, AutoModelForCausalLM, AutoTokenizer = _rloo_require()
+    selected_device = _select_device(torch, device)
+    resolved_model_path = resolve_model_name_or_path(model_name_or_path)
+    tokenizer = _prepare_tokenizer(AutoTokenizer.from_pretrained(resolved_model_path))
+    model = AutoModelForCausalLM.from_pretrained(resolved_model_path)
+    if getattr(model.config, "vocab_size", 0) < len(tokenizer):
+        model.resize_token_embeddings(len(tokenizer))
+    model.to(selected_device)
+
+    def generator(prompt: str, allow_clean: bool) -> str:
+        segment = _generate_segment(
+            model=model,
+            tokenizer=tokenizer,
+            prompt=prompt,
+            device=selected_device,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            allow_clean=allow_clean,
+        )
+        return segment.response
+
+    summary = run_multi_clean_eval_loop(
+        examples,
+        generator=generator,
+        max_clean_tries=max_clean_tries,
+    )
+    summary["device"] = selected_device
+    summary["model"] = resolved_model_path
+    return summary
+
+
 def write_evaluation_outputs(summary: Dict[str, Any], output_dir: str | Path) -> None:
     """Write evaluation summary and per-example results to disk."""
 
@@ -167,6 +342,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip the clean-aware retry path and score only the first generation.",
     )
+    parser.add_argument(
+        "--max-clean-tries",
+        type=int,
+        default=1,
+        help=(
+            "Maximum number of <clean> emissions allowed per example before the "
+            "decoder must commit. 1 (default) preserves the legacy one-shot reset "
+            "path; values >= 2 enable the verifier-aware multi-clean decoder."
+        ),
+    )
     return parser
 
 
@@ -181,6 +366,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             temperature=args.temperature,
         )
         summary = evaluate_countdown_outputs(examples, responses)
+    elif args.max_clean_tries >= 2:
+        summary = evaluate_with_multi_clean_decoder(
+            examples,
+            model_name_or_path=args.model,
+            max_new_tokens=args.max_new_tokens,
+            temperature=args.temperature,
+            max_clean_tries=args.max_clean_tries,
+        )
     else:
         from learning_to_reset.rloo_runtime import evaluate_reset_aware_model
 
