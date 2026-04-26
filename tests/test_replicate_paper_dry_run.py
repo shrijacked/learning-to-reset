@@ -122,6 +122,35 @@ class ReplicatePaperDryRunTests(unittest.TestCase):
                 msg=f"dry-run did not validate the {stage} CLI",
             )
 
+    def test_dry_run_exits_zero_with_ltr_verifier_feedback_env(self) -> None:
+        """Orchestrator must stay valid when step 8 may add --verifier-feedback."""
+
+        self.assertTrue(SCRIPT_PATH.exists())
+        bash = _bash_executable()
+        with tempfile.TemporaryDirectory(prefix="ltr-replicate-dryrun-vf-") as tmpdir:
+            env = os.environ.copy()
+            env["PYTHONPATH"] = str(REPO_ROOT / "src")
+            env.setdefault("PYTHON", sys.executable)
+            env["LTR_VERIFIER_FEEDBACK"] = "1"
+            result = subprocess.run(
+                [
+                    bash,
+                    str(SCRIPT_PATH),
+                    "--dry-run",
+                    "--base-model",
+                    "Qwen/Qwen2.5-0.5B",
+                    "--out-dir",
+                    str(Path(tmpdir) / "replicate-out"),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+                cwd=REPO_ROOT,
+            )
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertIn("dry-run complete.", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

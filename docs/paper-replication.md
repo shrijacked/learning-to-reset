@@ -145,6 +145,17 @@ The repo's automated test suite includes a gated subprocess test
 when `LTR_REPLICATE_DRY_RUN=1` is set, ensuring the script stays
 aligned with the underlying CLIs after every commit.
 
+### Optional: `LTR_VERIFIER_FEEDBACK=1` on step 8 (ablation only)
+
+For a **non–dry-run** replication, exporting `LTR_VERIFIER_FEEDBACK=1` before
+`bash scripts/replicate_paper.sh ...` passes `--verifier-feedback` into the
+final multi-clean `eval_runtime` step so each post-`<clean>` retry prompt
+includes verifier-computed value vs target (see `README.md`). This is **not**
+part of the original paper baseline; use it for pilot ablations. On Qwen
+2.5 0.5B hard holdouts (April 2026 pilot), it did **not** move target-correct
+`accuracy` above zero versus the same runs without the flag, while
+`eval-final/summary.json` records `"verifier_feedback": true` for traceability.
+
 ## 7. Common failure modes
 
 | Symptom                                              | Likely cause                                | Fix                                                  |

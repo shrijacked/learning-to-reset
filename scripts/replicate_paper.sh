@@ -13,6 +13,11 @@
 #   9. Extension comparison                      (run_extension_comparison.py)
 #   10. Qualitative sample export                (export_qualitative_samples.py)
 #
+# Optional environment:
+#   LTR_VERIFIER_FEEDBACK=1  — append decode-time verifier hints on step 8 retries
+#                              (passes --verifier-feedback to eval_runtime; not in
+#                              the original paper baseline, see README).
+#
 # Usage:
 #   bash scripts/replicate_paper.sh --base-model Qwen/Qwen2.5-1.5B-Instruct \
 #                                   --out-dir runs/replicate-paper-2026-04-26
@@ -107,6 +112,13 @@ EVAL_FINAL_DIR="$OUT_DIR/eval-final"
 EXTENSIONS_DIR="$OUT_DIR/extensions"
 QUALITATIVE_PATH="$OUT_DIR/qualitative.md"
 MINED_TRACES_PATH="$OUT_DIR/mined-recovery-traces.jsonl"
+
+# Use a string (not an empty bash array) so `set -u` on macOS /bin/bash does not
+# treat "${ARRAY[@]}" as an unbound when the array is empty.
+VERIFIER_FEEDBACK_FLAG=""
+if [[ "${LTR_VERIFIER_FEEDBACK:-0}" == "1" ]]; then
+    VERIFIER_FEEDBACK_FLAG="--verifier-feedback"
+fi
 
 log() {
     if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -224,7 +236,8 @@ run_cmd "$PYTHON" -m learning_to_reset.eval_runtime \
     --model "$RLOO_DIR" \
     --output-dir "$EVAL_FINAL_DIR" \
     --max-new-tokens 384 \
-    --max-clean-tries "$MAX_CLEAN_TRIES"
+    --max-clean-tries "$MAX_CLEAN_TRIES" \
+    $VERIFIER_FEEDBACK_FLAG
 
 ###############################################################################
 # Step 9: Extension comparison (full-reset / retention / memory).
