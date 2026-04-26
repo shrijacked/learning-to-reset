@@ -3,8 +3,9 @@ import unittest
 from learning_to_reset.eval_runtime import (
     build_countdown_sample_from_example,
     evaluate_countdown_outputs,
+    run_multi_clean_eval_loop,
 )
-from learning_to_reset.prompts import PromptExample
+from learning_to_reset.prompts import PromptExample, build_reasoning_prompt
 
 
 class EvalRuntimeTests(unittest.TestCase):
@@ -104,6 +105,116 @@ class EvalRuntimeTests(unittest.TestCase):
 
         self.assertAlmostEqual(summary["clean_rate"], 0.0)
         self.assertAlmostEqual(summary["score_when_cleaned"], 0.0)
+
+
+def _build_reach_50_example() -> PromptExample:
+    question = "Reach 50 using 25, 7, 3, 2."
+    return PromptExample(
+        prompt=build_reasoning_prompt(question, allow_clean=True),
+        response="",
+        metadata={
+            "numbers": (25, 7, 3, 2),
+            "target": 50,
+            "source_id": "c1",
+            "question": question,
+        },
+    )
+
+
+class MultiCleanEvalLoopTests(unittest.TestCase):
+    def test_default_max_clean_tries_one_matches_legacy_behaviour(self) -> None:
+        example = _build_reach_50_example()
+        scripted = iter([
+            "<think>Confused.</think><clean>",
+            "<think>Fresh.</think><answer>25 * 2</answer>",
+        ])
+
+        def generator(prompt: str, allow_clean: bool) -> str:
+            return next(scripted)
+
+        summary = run_multi_clean_eval_loop(
+            (example,), generator=generator, max_clean_tries=1
+        )
+
+        self.assertEqual(summary["total_examples"], 1)
+        self.assertEqual(summary["correct"], 1)
+        self.assertEqual(summary["results"][0]["clean_count"], 1)
+        self.assertEqual(summary["results"][0]["segment_count"], 2)
+        self.assertTrue(summary["results"][0]["cleaned"])
+
+    def test_multi_clean_keeps_retrying_until_target_correct(self) -> None:
+        example = _build_reach_50_example()
+        scripted = iter([
+            "<think>Bad.</think><clean>",
+            "<think>Still bad.</think><clean>",
+            "<think>Got it.</think><answer>25 * 2</answer>",
+        ])
+
+        def generator(prompt: str, allow_clean: bool) -> str:
+            return next(scripted)
+
+        summary = run_multi_clean_eval_loop(
+            (example,), generator=generator, max_clean_tries=3
+        )
+
+        self.assertEqual(summary["correct"], 1)
+        self.assertEqual(summary["results"][0]["clean_count"], 2)
+        self.assertEqual(summary["results"][0]["segment_count"], 3)
+        self.assertTrue(summary["results"][0]["budget_exhausted"] is False)
+
+    def test_multi_clean_budget_caps_retries_when_no_correct_answer(self) -> None:
+        example = _build_reach_50_example()
+        scripted = iter([
+            "<think>Bad.</think><clean>",
+            "<think>Bad.</think><clean>",
+            "<think>Bad.</think><clean>",
+            "<think>Last.</think><answer>1 + 2</answer>",
+        ])
+        called_with_allow_clean = []
+
+        def generator(prompt: str, allow_clean: bool) -> str:
+            called_with_allow_clean.append(allow_clean)
+            return next(scripted)
+
+        summary = run_multi_clean_eval_loop(
+            (example,), generator=generator, max_clean_tries=3
+        )
+
+        self.assertEqual(summary["correct"], 0)
+        self.assertEqual(summary["results"][0]["clean_count"], 3)
+        self.assertEqual(summary["results"][0]["segment_count"], 4)
+        self.assertTrue(summary["results"][0]["budget_exhausted"])
+        self.assertEqual(called_with_allow_clean[-1], False)
+
+    def test_multi_clean_short_circuits_on_first_correct_answer(self) -> None:
+        example = _build_reach_50_example()
+        scripted = iter([
+            "<think>Direct hit.</think><answer>25 * 2</answer>",
+            "<think>Should not run.</think><answer>nonsense</answer>",
+        ])
+
+        def generator(prompt: str, allow_clean: bool) -> str:
+            return next(scripted)
+
+        summary = run_multi_clean_eval_loop(
+            (example,), generator=generator, max_clean_tries=3
+        )
+
+        self.assertEqual(summary["correct"], 1)
+        self.assertEqual(summary["results"][0]["clean_count"], 0)
+        self.assertEqual(summary["results"][0]["segment_count"], 1)
+        self.assertFalse(summary["results"][0]["cleaned"])
+
+    def test_multi_clean_rejects_invalid_max_clean_tries(self) -> None:
+        example = _build_reach_50_example()
+
+        def generator(prompt: str, allow_clean: bool) -> str:
+            return "<answer>25 * 2</answer>"
+
+        with self.assertRaises(ValueError):
+            run_multi_clean_eval_loop(
+                (example,), generator=generator, max_clean_tries=0
+            )
 
 
 if __name__ == "__main__":
