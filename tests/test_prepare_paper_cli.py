@@ -79,16 +79,21 @@ class PreparePaperCliTests(unittest.TestCase):
             hard_eval_exists = (output_dir / "countdown-test-hard.jsonl").exists()
             hard_train_exists = (output_dir / "countdown-train-hard.jsonl").exists()
             hard_mine_exists = (output_dir / "countdown-mine-hard.jsonl").exists()
+            hard_eval_raw_exists = (output_dir / "countdown-test-hard-raw.jsonl").exists()
+            hard_mine_raw_exists = (output_dir / "countdown-mine-hard-raw.jsonl").exists()
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(manifest["countdown"]["test"], 1)
         self.assertEqual(manifest["countdown"]["test_hard"], 1)
         self.assertEqual(manifest["countdown"]["train_hard"], 0)
         self.assertEqual(manifest["countdown"]["mine_hard"], 1)
+        self.assertTrue(manifest["raw_baseline_variants"])
         self.assertIn('"sft"', buffer.getvalue())
         self.assertTrue(hard_eval_exists)
         self.assertTrue(hard_train_exists)
         self.assertTrue(hard_mine_exists)
+        self.assertTrue(hard_eval_raw_exists)
+        self.assertTrue(hard_mine_raw_exists)
 
 
 if __name__ == "__main__":
