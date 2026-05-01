@@ -5,6 +5,7 @@ from learning_to_reset.data import CountdownSample
 from learning_to_reset.rollout_runtime import (
     build_clean_trajectory,
     compute_countdown_reward,
+    score_arithmetic_claims,
 )
 
 
@@ -25,6 +26,45 @@ class RolloutRuntimeTests(unittest.TestCase):
         self.assertAlmostEqual(reward.total_reward, 1.1)
         self.assertTrue(reward.has_valid_format)
         self.assertTrue(reward.is_correct)
+
+    def test_score_arithmetic_claims_rewards_correct_claims_and_penalizes_wrong_ones(self) -> None:
+        reward, total, correct, incorrect = score_arithmetic_claims(
+            "<think>Compute 7 + 2 = 9. Compute 9 + 1 = 10.</think>"
+        )
+
+        self.assertEqual(total, 2)
+        self.assertEqual(correct, 2)
+        self.assertEqual(incorrect, 0)
+        self.assertAlmostEqual(reward, 0.2)
+
+        reward2, total2, correct2, incorrect2 = score_arithmetic_claims(
+            "<think>Compute 7 + 2 = 8. Compute 9 + 1 = 10.</think>"
+        )
+
+        self.assertEqual(total2, 2)
+        self.assertEqual(correct2, 1)
+        self.assertEqual(incorrect2, 1)
+        self.assertAlmostEqual(reward2, 0.0)
+
+    def test_compute_countdown_reward_includes_arithmetic_claim_reward(self) -> None:
+        sample = CountdownSample(
+            source_id="c1b",
+            numbers=(7, 2, 1),
+            target=10,
+            question="Reach 10 using 7, 2, 1.",
+        )
+
+        reward = compute_countdown_reward(
+            "<think>Compute 7 + 2 = 9. Compute 9 + 1 = 10.</think><answer>((7 + 2) + 1)</answer>",
+            sample,
+        )
+
+        self.assertAlmostEqual(reward.correctness_reward, 1.0)
+        self.assertAlmostEqual(reward.arithmetic_claim_reward, 0.2)
+        self.assertAlmostEqual(reward.total_reward, 1.3)
+        self.assertEqual(reward.arithmetic_claims_total, 2)
+        self.assertEqual(reward.arithmetic_claims_correct, 2)
+        self.assertEqual(reward.arithmetic_claims_incorrect, 0)
 
     def test_compute_countdown_reward_handles_missing_answer_format(self) -> None:
         sample = CountdownSample(
