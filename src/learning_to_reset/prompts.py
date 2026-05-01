@@ -93,7 +93,12 @@ def build_sft_training_example(
         "source_id": record.source_id,
         "is_correct": record.is_correct,
         "uses_clean": curated.uses_clean,
+        "stage": "base-trace",
     }
+    for key in ("source", "recovery_style", "bootstrap_kind", "bootstrap_source_id"):
+        value = record.metadata.get(key)
+        if value not in (None, ""):
+            metadata[key] = value
     return PromptExample(prompt=prompt, response=curated.response, metadata=metadata)
 
 
