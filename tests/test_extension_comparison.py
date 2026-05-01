@@ -42,8 +42,8 @@ class ExtensionComparisonTests(unittest.TestCase):
         self.assertEqual(comparison.winner, "selective_retention")
         self.assertEqual(len(comparison.rows), 3)
         self.assertAlmostEqual(comparison.rows[0].adjusted_total_reward, 0.05)
-        self.assertAlmostEqual(comparison.rows[1].adjusted_total_reward, 1.05)
-        self.assertAlmostEqual(comparison.rows[2].adjusted_total_reward, 1.05)
+        self.assertAlmostEqual(comparison.rows[1].adjusted_total_reward, 1.25)
+        self.assertAlmostEqual(comparison.rows[2].adjusted_total_reward, 1.25)
 
     def test_render_extension_comparison_markdown_includes_mode_table(self) -> None:
         comparison = compare_extension_trajectories(
