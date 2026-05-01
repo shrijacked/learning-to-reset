@@ -8,15 +8,19 @@
 #   4. Baseline raw eval on hard-mine raw prompts (eval_runtime --raw-generation)
 #   5. Mine recovery traces from hard-mine       (failure_recovery_traces --exclude-source-ids)
 #   6. Re-SFT on combined corpus                 (sft_runtime)
-#   7. Reset-aware RLOO                          (rloo_runtime)
-#   8. Final reset-aware eval (multi-clean)      (eval_runtime --max-clean-tries 3)
-#   9. Extension comparison                      (run_extension_comparison.py)
-#   10. Qualitative sample export                (export_qualitative_samples.py)
+#   7. Pre-RLOO hard retry gate                  (eval_runtime + threshold check)
+#   8. Reset-aware RLOO                          (rloo_runtime)
+#   9. Final reset-aware eval (multi-clean)      (eval_runtime --max-clean-tries 3)
+#   10. Extension comparison                     (run_extension_comparison.py)
+#   11. Qualitative sample export                (export_qualitative_samples.py)
 #
 # Optional environment:
 #   LTR_VERIFIER_FEEDBACK=1  — append decode-time verifier hints on step 8 retries
 #                              (passes --verifier-feedback to eval_runtime; not in
 #                              the original paper baseline, see README).
+#   LTR_RLOO_MIN_HARD_CORRECT — minimum hard-slice correct count required before
+#                              launching RLOO. Default: 2.
+#   LTR_RLOO_GATE_DISABLE=1  — bypass the pre-RLOO hard-correctness gate.
 #
 # Usage:
 #   bash scripts/replicate_paper.sh --base-model Qwen/Qwen2.5-1.5B-Instruct \
@@ -108,10 +112,13 @@ SFT_DIR="$OUT_DIR/sft"
 SFT2_DIR="$OUT_DIR/sft-mined"
 RLOO_DIR="$OUT_DIR/rloo"
 EVAL_RAW_DIR="$OUT_DIR/eval-raw"
+EVAL_PRE_RLOO_DIR="$OUT_DIR/eval-pre-rloo"
 EVAL_FINAL_DIR="$OUT_DIR/eval-final"
 EXTENSIONS_DIR="$OUT_DIR/extensions"
 QUALITATIVE_PATH="$OUT_DIR/qualitative.md"
 MINED_TRACES_PATH="$OUT_DIR/mined-recovery-traces.jsonl"
+RLOO_MIN_HARD_CORRECT="${LTR_RLOO_MIN_HARD_CORRECT:-2}"
+RLOO_GATE_DISABLE="${LTR_RLOO_GATE_DISABLE:-0}"
 
 # Use a string (not an empty bash array) so `set -u` on macOS /bin/bash does not
 # treat "${ARRAY[@]}" as an unbound when the array is empty.
@@ -145,6 +152,37 @@ check_cli() {
         exit 2
     fi
     log "cli ok: $label"
+}
+
+enforce_rloo_gate() {
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        return 0
+    fi
+    if [[ "$RLOO_GATE_DISABLE" == "1" ]]; then
+        log "skip RLOO gate: LTR_RLOO_GATE_DISABLE=1"
+        return 0
+    fi
+
+    local summary_path="$EVAL_PRE_RLOO_DIR/summary.json"
+    if [[ ! -f "$summary_path" ]]; then
+        echo "ERROR: missing pre-RLOO evaluation summary: $summary_path" >&2
+        exit 2
+    fi
+
+    local gate_values
+    gate_values="$("$PYTHON" -c 'import json, sys; payload = json.load(open(sys.argv[1], encoding="utf-8")); print(f"{int(payload.get(\"correct\", 0))} {int(payload.get(\"total_examples\", 0))} {float(payload.get(\"accuracy\", 0.0))}")' "$summary_path")"
+    local hard_correct hard_total hard_accuracy
+    read -r hard_correct hard_total hard_accuracy <<<"$gate_values"
+
+    if (( hard_correct < RLOO_MIN_HARD_CORRECT )); then
+        echo "ERROR: pre-RLOO hard correctness gate failed." >&2
+        echo "SFT checkpoint scored ${hard_correct}/${hard_total} on countdown-test-hard.jsonl." >&2
+        echo "Required minimum correct count before RLOO: ${RLOO_MIN_HARD_CORRECT}." >&2
+        echo "Improve SFT/data/reward first, or override intentionally with LTR_RLOO_GATE_DISABLE=1." >&2
+        exit 2
+    fi
+
+    log "pre-RLOO hard correctness gate passed: ${hard_correct}/${hard_total} (accuracy=${hard_accuracy})"
 }
 
 ###############################################################################
@@ -215,7 +253,18 @@ run_cmd "$PYTHON" -m learning_to_reset.sft_runtime \
     --epochs 1.0
 
 ###############################################################################
-# Step 7: Reset-aware RLOO.
+# Step 7: Pre-RLOO hard retry gate.
+###############################################################################
+run_cmd "$PYTHON" -m learning_to_reset.eval_runtime \
+    --prepared-countdown "$ARTIFACTS_DIR/countdown-test-hard.jsonl" \
+    --model "$SFT2_DIR" \
+    --output-dir "$EVAL_PRE_RLOO_DIR" \
+    --max-new-tokens 384 \
+    --max-clean-tries "$MAX_CLEAN_TRIES"
+enforce_rloo_gate
+
+###############################################################################
+# Step 8: Reset-aware RLOO.
 ###############################################################################
 check_cli "rloo_runtime" "$PYTHON" -m learning_to_reset.rloo_runtime
 run_cmd "$PYTHON" -m learning_to_reset.rloo_runtime \
@@ -229,7 +278,7 @@ run_cmd "$PYTHON" -m learning_to_reset.rloo_runtime \
     --temperature 1.0
 
 ###############################################################################
-# Step 8: Final reset-aware eval with multi-clean decoding.
+# Step 9: Final reset-aware eval with multi-clean decoding.
 ###############################################################################
 run_cmd "$PYTHON" -m learning_to_reset.eval_runtime \
     --prepared-countdown "$ARTIFACTS_DIR/countdown-test-hard.jsonl" \
@@ -240,7 +289,7 @@ run_cmd "$PYTHON" -m learning_to_reset.eval_runtime \
     $VERIFIER_FEEDBACK_FLAG
 
 ###############################################################################
-# Step 9: Extension comparison (full-reset / retention / memory).
+# Step 10: Extension comparison (full-reset / retention / memory).
 ###############################################################################
 EXTENSION_SCRIPT="scripts/run_extension_comparison.py"
 if [[ -f "$EXTENSION_SCRIPT" ]]; then
@@ -255,7 +304,7 @@ else
 fi
 
 ###############################################################################
-# Step 10: Qualitative sample export (Figure 7).
+# Step 11: Qualitative sample export (Figure 7).
 ###############################################################################
 QUAL_SCRIPT="scripts/export_qualitative_samples.py"
 if [[ -f "$QUAL_SCRIPT" ]]; then

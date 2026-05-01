@@ -168,7 +168,7 @@ Interpretation:
 1. Improve recovery supervision with step-level verifier reward (or similar) so intermediate `Compute` claims cannot be fabricated without penalty; passive templates alone did not beat the `1/32` hard-holdout bar at 0.5B.
 2. Add or fetch a stronger Countdown-native expert-trace source with verified target-correct hard recoveries.
 3. Scale the fetched reference-trace corpus and Countdown split beyond the current local CPU pilot.
-4. Re-run reset-aware RLOO after the SFT checkpoint produces more than sparse target-correct hard retries.
+4. Re-run reset-aware RLOO only after the SFT checkpoint clears a nontrivial hard-retry correctness gate.
 5. Run a larger raw-versus-reset-aware comparison using a broader hard Countdown slice.
 6. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
 
