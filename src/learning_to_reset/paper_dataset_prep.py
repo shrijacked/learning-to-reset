@@ -29,6 +29,7 @@ def export_paper_prepared_datasets(
     output_dir,
     sft_val_ratio: float = 0.1,
     countdown_val_ratio: float = 0.1,
+    hard_mine_ratio: float = 0.2,
     allow_clean: bool = True,
     include_recovery_examples: bool = False,
     recovery_repeat: int = 1,
@@ -56,6 +57,13 @@ def export_paper_prepared_datasets(
         countdown_eval_samples,
         allow_clean=allow_clean,
     )
+    hard_countdown_train_samples = filter_hard_countdown_samples(
+        load_countdown_samples(countdown_train_path)
+    )
+    hard_countdown_train_examples = prepare_countdown_examples(
+        hard_countdown_train_samples,
+        allow_clean=allow_clean,
+    )
     countdown_hard_eval_examples = prepare_countdown_examples(
         filter_hard_countdown_samples(countdown_eval_samples),
         allow_clean=allow_clean,
@@ -64,11 +72,21 @@ def export_paper_prepared_datasets(
         countdown_train_examples,
         val_ratio=countdown_val_ratio,
     )
+    hard_countdown_train, hard_countdown_mine = _train_validation_split(
+        hard_countdown_train_examples,
+        val_ratio=hard_mine_ratio,
+    )
 
     write_prompt_examples_jsonl(sft_train, output_root / "sft-train.jsonl")
     write_prompt_examples_jsonl(sft_validation, output_root / "sft-validation.jsonl")
     write_prompt_examples_jsonl(countdown_train, output_root / "countdown-train.jsonl")
     write_prompt_examples_jsonl(countdown_validation, output_root / "countdown-validation.jsonl")
+    write_prompt_examples_jsonl(
+        hard_countdown_train, output_root / "countdown-train-hard.jsonl"
+    )
+    write_prompt_examples_jsonl(
+        hard_countdown_mine, output_root / "countdown-mine-hard.jsonl"
+    )
     write_prompt_examples_jsonl(countdown_eval_examples, output_root / "countdown-test.jsonl")
     write_prompt_examples_jsonl(countdown_hard_eval_examples, output_root / "countdown-test-hard.jsonl")
 
@@ -82,6 +100,8 @@ def export_paper_prepared_datasets(
             "validation": len(countdown_validation),
             "test": len(countdown_eval_examples),
             "test_hard": len(countdown_hard_eval_examples),
+            "train_hard": len(hard_countdown_train),
+            "mine_hard": len(hard_countdown_mine),
         },
         "allow_clean": allow_clean,
         "include_recovery_examples": include_recovery_examples,
@@ -89,6 +109,7 @@ def export_paper_prepared_datasets(
         "require_recovery_target_correct": require_recovery_target_correct,
         "sft_val_ratio": sft_val_ratio,
         "countdown_val_ratio": countdown_val_ratio,
+        "hard_mine_ratio": hard_mine_ratio,
     }
     (output_root / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=True) + "\n",
