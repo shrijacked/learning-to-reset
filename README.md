@@ -232,6 +232,8 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.rloo_runtime \
   --responses-per-prompt 4
 ```
 
+Do not treat RLOO as the default next step if the current SFT checkpoint is still at fluke-level hard correctness. The repo now assumes a simple gate: only rerun RLOO once hard retry correctness is **strictly better than** the current `1/32`-style ceiling on the relevant hard slice. If the SFT checkpoint cannot clear that floor, improve SFT/data/reward first.
+
 ## Repository Layout
 
 ```text
