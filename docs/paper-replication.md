@@ -15,6 +15,8 @@ maps each paper claim to its implementation.
 > replication path documented here is for users who have GPU access
 > and want to reproduce the published numbers.
 
+This runbook remains the recommended path for reproducing the paper's headline result. It is **not** a recommendation to keep iterating on template-only or decode-only prompt changes at `0.5B`. Those paths remain in the repo for traceability and diagnostics, but the local evidence says they are weak default bets for hard arithmetic correctness.
+
 ## 1. Hardware and software floor
 
 | Resource             | Minimum                              | Recommended           |
@@ -155,6 +157,8 @@ part of the original paper baseline; use it for pilot ablations. On Qwen
 2.5 0.5B hard holdouts (April 2026 pilot), it did **not** move target-correct
 `accuracy` above zero versus the same runs without the flag, while
 `eval-final/summary.json` records `"verifier_feedback": true` for traceability.
+Treat this as a diagnostic ablation only, not as a recommended next step for
+improving correctness at `0.5B`.
 
 ## 7. Common failure modes
 
@@ -187,6 +191,10 @@ and lets reviewers cross-check Figures 6 and 7 against your run.
   reaches a hard-correctness ceiling around 1/32 even with all the
   decode-time levers; this is documented in
   `docs/grounded-recovery-results-2026-04-26.md`.
+- **More template-only 0.5B iterations as a default research path.** The
+  repo keeps grounded-template, multi-clean, and verifier-feedback paths for
+  reproducibility, but the current recommendation is to prioritize stronger
+  arithmetic supervision or the 1B+ replication route instead.
 - **Live training of the 1B+ model from this project's CI.** The
   pipeline assumes you have provisioned GPU compute yourself.
 - **Paper-faithful results without `--scale paper`.** The pilot scale
