@@ -17,6 +17,7 @@ SCALE_PRESETS: Dict[str, Dict[str, Any]] = {
         "recovery_repeat": 1,
         "include_recovery_examples": False,
         "require_recovery_target_correct": False,
+        "exclude_bootstrap_negatives": False,
     },
     "paper": {
         "sft_val_ratio": 0.05,
@@ -25,6 +26,7 @@ SCALE_PRESETS: Dict[str, Dict[str, Any]] = {
         "recovery_repeat": 4,
         "include_recovery_examples": True,
         "require_recovery_target_correct": True,
+        "exclude_bootstrap_negatives": True,
     },
 }
 
@@ -124,6 +126,22 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_false",
         help="Override the scale preset and skip the target-correct filter.",
     )
+    parser.add_argument(
+        "--exclude-bootstrap-negatives",
+        dest="exclude_bootstrap_negatives",
+        action="store_true",
+        default=None,
+        help=(
+            "Exclude bootstrap-generated clean-only negatives from the final SFT mix "
+            "to reduce reset-heavy skew."
+        ),
+    )
+    parser.add_argument(
+        "--no-exclude-bootstrap-negatives",
+        dest="exclude_bootstrap_negatives",
+        action="store_false",
+        help="Override the scale preset and keep bootstrap-generated clean-only negatives.",
+    )
     return parser
 
 
@@ -138,6 +156,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "recovery_repeat": args.recovery_repeat,
             "include_recovery_examples": args.include_recovery_examples,
             "require_recovery_target_correct": args.require_recovery_target_correct,
+            "exclude_bootstrap_negatives": args.exclude_bootstrap_negatives,
         },
     )
     manifest = export_paper_prepared_datasets(
@@ -154,6 +173,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         require_recovery_target_correct=bool(
             configured["require_recovery_target_correct"]
         ),
+        exclude_bootstrap_negatives=bool(configured["exclude_bootstrap_negatives"]),
     )
     manifest["scale"] = args.scale
     print(json.dumps(manifest, indent=2, ensure_ascii=True))

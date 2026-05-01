@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from fractions import Fraction
 import re
@@ -204,19 +205,62 @@ def prepare_sft_examples(
     include_recovery_examples: bool = False,
     recovery_repeat: int = 1,
     require_recovery_target_correct: bool = False,
+    exclude_bootstrap_negatives: bool = False,
 ) -> Tuple[PromptExample, ...]:
     """Convert trace records into prompt/response examples for SFT."""
 
-    examples = [build_sft_training_example(record) for record in records]
+    filtered_records = tuple(
+        record
+        for record in records
+        if not (
+            exclude_bootstrap_negatives
+            and record.metadata.get("bootstrap_kind") == "think_only_negative"
+        )
+    )
+
+    examples = [build_sft_training_example(record) for record in filtered_records]
     if include_recovery_examples:
         examples.extend(
             prepare_retry_recovery_examples(
-                records,
+                filtered_records,
                 repeat=recovery_repeat,
                 require_target_correct=require_recovery_target_correct,
             )
         )
     return tuple(examples)
+
+
+def summarize_sft_example_mix(
+    examples: Sequence[PromptExample],
+) -> dict[str, object]:
+    """Summarize prepared SFT examples by source/style/stage and clean usage."""
+
+    source_counter: Counter[str] = Counter()
+    stage_counter: Counter[str] = Counter()
+    recovery_style_counter: Counter[str] = Counter()
+    bootstrap_kind_counter: Counter[str] = Counter()
+    uses_clean_counter: Counter[str] = Counter()
+
+    for example in examples:
+        metadata = example.metadata or {}
+        source_counter[str(metadata.get("source", "unknown"))] += 1
+        stage_counter[str(metadata.get("stage", "unknown"))] += 1
+        recovery_style = metadata.get("recovery_style")
+        if recovery_style not in (None, ""):
+            recovery_style_counter[str(recovery_style)] += 1
+        bootstrap_kind = metadata.get("bootstrap_kind")
+        if bootstrap_kind not in (None, ""):
+            bootstrap_kind_counter[str(bootstrap_kind)] += 1
+        uses_clean_counter["true" if bool(metadata.get("uses_clean")) else "false"] += 1
+
+    return {
+        "total_examples": len(examples),
+        "by_source": dict(sorted(source_counter.items())),
+        "by_stage": dict(sorted(stage_counter.items())),
+        "by_recovery_style": dict(sorted(recovery_style_counter.items())),
+        "by_bootstrap_kind": dict(sorted(bootstrap_kind_counter.items())),
+        "by_uses_clean": dict(sorted(uses_clean_counter.items())),
+    }
 
 
 def prepare_countdown_examples(
