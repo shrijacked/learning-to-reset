@@ -87,11 +87,17 @@ class PaperDatasetPrepTests(unittest.TestCase):
                 allow_clean=True,
             )
             test_payload = (output_dir / "countdown-test.jsonl").read_text(encoding="utf-8").splitlines()
+            raw_test_payload = (
+                output_dir / "countdown-test-raw.jsonl"
+            ).read_text(encoding="utf-8").splitlines()
 
         self.assertEqual(manifest["countdown"]["test"], 1)
         self.assertEqual(len(test_payload), 1)
         self.assertIn('"source_id": "c3"', test_payload[0])
         self.assertEqual(manifest["countdown"]["test_hard"], 0)
+        self.assertEqual(len(raw_test_payload), 1)
+        self.assertIn('"source_id": "c3"', raw_test_payload[0])
+        self.assertNotIn("emit <clean>", raw_test_payload[0])
 
     def test_export_paper_prepared_datasets_writes_hard_eval_slice(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -240,8 +246,14 @@ class PaperDatasetPrepTests(unittest.TestCase):
             hard_mine_payload = (
                 output_dir / "countdown-mine-hard.jsonl"
             ).read_text(encoding="utf-8").splitlines()
+            hard_mine_raw_payload = (
+                output_dir / "countdown-mine-hard-raw.jsonl"
+            ).read_text(encoding="utf-8").splitlines()
             hard_holdout_payload = (
                 output_dir / "countdown-test-hard.jsonl"
+            ).read_text(encoding="utf-8").splitlines()
+            hard_holdout_raw_payload = (
+                output_dir / "countdown-test-hard-raw.jsonl"
             ).read_text(encoding="utf-8").splitlines()
 
         self.assertEqual(manifest["countdown"]["train_hard"], 1)
@@ -249,10 +261,14 @@ class PaperDatasetPrepTests(unittest.TestCase):
         self.assertEqual(manifest["countdown"]["test_hard"], 1)
         self.assertEqual(len(hard_train_payload), 1)
         self.assertEqual(len(hard_mine_payload), 1)
+        self.assertEqual(len(hard_mine_raw_payload), 1)
         self.assertEqual(len(hard_holdout_payload), 1)
+        self.assertEqual(len(hard_holdout_raw_payload), 1)
         self.assertIn('"source_id": "train-hard-1"', hard_train_payload[0])
         self.assertIn('"source_id": "train-hard-2"', hard_mine_payload[0])
         self.assertIn('"source_id": "eval-hard"', hard_holdout_payload[0])
+        self.assertNotIn("emit <clean>", hard_mine_raw_payload[0])
+        self.assertNotIn("emit <clean>", hard_holdout_raw_payload[0])
 
     def test_export_paper_prepared_datasets_can_include_retry_recovery_examples(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

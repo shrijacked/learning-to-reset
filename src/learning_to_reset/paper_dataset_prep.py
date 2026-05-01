@@ -52,10 +52,18 @@ def export_paper_prepared_datasets(
         load_countdown_samples(countdown_train_path),
         allow_clean=allow_clean,
     )
+    countdown_train_raw_examples = prepare_countdown_examples(
+        load_countdown_samples(countdown_train_path),
+        allow_clean=False,
+    )
     countdown_eval_samples = load_countdown_samples(countdown_eval_path)
     countdown_eval_examples = prepare_countdown_examples(
         countdown_eval_samples,
         allow_clean=allow_clean,
+    )
+    countdown_eval_raw_examples = prepare_countdown_examples(
+        countdown_eval_samples,
+        allow_clean=False,
     )
     hard_countdown_train_samples = filter_hard_countdown_samples(
         load_countdown_samples(countdown_train_path)
@@ -64,16 +72,32 @@ def export_paper_prepared_datasets(
         hard_countdown_train_samples,
         allow_clean=allow_clean,
     )
+    hard_countdown_train_raw_examples = prepare_countdown_examples(
+        hard_countdown_train_samples,
+        allow_clean=False,
+    )
     countdown_hard_eval_examples = prepare_countdown_examples(
         filter_hard_countdown_samples(countdown_eval_samples),
         allow_clean=allow_clean,
+    )
+    countdown_hard_eval_raw_examples = prepare_countdown_examples(
+        filter_hard_countdown_samples(countdown_eval_samples),
+        allow_clean=False,
     )
     countdown_train, countdown_validation = _train_validation_split(
         countdown_train_examples,
         val_ratio=countdown_val_ratio,
     )
+    countdown_train_raw, countdown_validation_raw = _train_validation_split(
+        countdown_train_raw_examples,
+        val_ratio=countdown_val_ratio,
+    )
     hard_countdown_train, hard_countdown_mine = _train_validation_split(
         hard_countdown_train_examples,
+        val_ratio=hard_mine_ratio,
+    )
+    hard_countdown_train_raw, hard_countdown_mine_raw = _train_validation_split(
+        hard_countdown_train_raw_examples,
         val_ratio=hard_mine_ratio,
     )
 
@@ -81,14 +105,30 @@ def export_paper_prepared_datasets(
     write_prompt_examples_jsonl(sft_validation, output_root / "sft-validation.jsonl")
     write_prompt_examples_jsonl(countdown_train, output_root / "countdown-train.jsonl")
     write_prompt_examples_jsonl(countdown_validation, output_root / "countdown-validation.jsonl")
+    write_prompt_examples_jsonl(countdown_train_raw, output_root / "countdown-train-raw.jsonl")
+    write_prompt_examples_jsonl(
+        countdown_validation_raw, output_root / "countdown-validation-raw.jsonl"
+    )
     write_prompt_examples_jsonl(
         hard_countdown_train, output_root / "countdown-train-hard.jsonl"
     )
     write_prompt_examples_jsonl(
         hard_countdown_mine, output_root / "countdown-mine-hard.jsonl"
     )
+    write_prompt_examples_jsonl(
+        hard_countdown_train_raw, output_root / "countdown-train-hard-raw.jsonl"
+    )
+    write_prompt_examples_jsonl(
+        hard_countdown_mine_raw, output_root / "countdown-mine-hard-raw.jsonl"
+    )
     write_prompt_examples_jsonl(countdown_eval_examples, output_root / "countdown-test.jsonl")
+    write_prompt_examples_jsonl(
+        countdown_eval_raw_examples, output_root / "countdown-test-raw.jsonl"
+    )
     write_prompt_examples_jsonl(countdown_hard_eval_examples, output_root / "countdown-test-hard.jsonl")
+    write_prompt_examples_jsonl(
+        countdown_hard_eval_raw_examples, output_root / "countdown-test-hard-raw.jsonl"
+    )
 
     manifest = {
         "sft": {
@@ -110,6 +150,7 @@ def export_paper_prepared_datasets(
         "sft_val_ratio": sft_val_ratio,
         "countdown_val_ratio": countdown_val_ratio,
         "hard_mine_ratio": hard_mine_ratio,
+        "raw_baseline_variants": True,
     }
     (output_root / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=True) + "\n",
