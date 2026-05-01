@@ -172,6 +172,20 @@ Interpretation:
 5. Run a larger raw-versus-reset-aware comparison using a broader hard Countdown slice.
 6. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
 
+## Deprioritized At 0.5B
+
+The following remain implemented in the repo, but they should not be treated as default next bets for arithmetic correctness on the local `Qwen2.5-0.5B` path:
+
+- more grounded-template wording iterations
+- more multi-clean retry-budget tuning
+- more verifier-feedback prompt-text tuning
+
+Why:
+
+- these levers improved validity more than correctness on the documented hard holdouts
+- the main blocker is arithmetic grounding, not template compliance
+- future local work should prioritize stronger data quality, stronger reward, or larger-model replication instead
+
 ## Remaining Non-Engineering Work
 
 - choose the presentation slot in the shared schedule

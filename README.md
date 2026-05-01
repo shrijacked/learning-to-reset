@@ -42,6 +42,12 @@ The repository now supports the baseline pipeline over prepared artifacts: fetch
 
 The latest local pilot now exercises that path on real fetched Countdown prompts plus expanded Countdown-aligned fallback traces. The best current CPU-only checkpoint is the expanded SFT run: raw one-pass decoding remains `0/8` valid, while reset-aware evaluation reaches `8/8` valid, `1/8` correct, and `clean_rate = 1.0` on the held-out slice. A balanced verifier-grounded ablation ties that result. Hard-focused SFT and a hard-focused reset-aware RLOO pass both completed, but neither improved target-correct arithmetic on the original 3-example hard slice. A plus-mined SFT run on a fresh 32-example hard holdout scored `29/32` valid and `1/32` correct with reset-aware retry.
 
+At the local `Qwen/Qwen2.5-0.5B` scale, the repo now treats template-only levers as documented-but-deprioritized for correctness work. Grounded-template changes, multi-clean retries, and verifier-feedback prompt text all improved validity more than arithmetic correctness on hard holdouts. Keep those paths for reproducibility and diagnostics, but prioritize:
+
+1. stronger arithmetic-grounded data and SFT mix quality
+2. step-level verifier reward or other denser arithmetic supervision
+3. the paper-faithful `1.5B+` replication path when hardware is available
+
 ## Project Docs
 
 - `docs/method-overview.md`: current method summary and implementation targets
@@ -189,7 +195,7 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.eval_runtime \
   --max-clean-tries 3
 ```
 
-If accuracy is stuck at zero but `average_score` or `score_when_cleaned` hovers around **0.1**, the model is usually emitting **legal** `<answer>` expressions that simply **miss the target** (scoring gives 0.1 partial credit for validity + 1.0 only when correct). For retries, add **`--verifier-feedback`** so each post-`<clean>` prompt includes the verifier’s computed value vs target; that is stronger than re-sending the same bare question and is the first decode-time lever to try before larger models or RLOO shaped on verifier reward.
+If accuracy is stuck at zero but `average_score` or `score_when_cleaned` hovers around **0.1**, the model is usually emitting **legal** `<answer>` expressions that simply **miss the target** (scoring gives 0.1 partial credit for validity + 1.0 only when correct). At `0.5B`, do **not** treat more template-only retries as the default next move: the repo's April 2026 results show that grounded templates, multi-clean decoding, and `--verifier-feedback` improved validity more than correctness on hard holdouts. Use those only for diagnostics or reproducibility; the default next bets are stronger arithmetic data, step-level verifier reward, or a larger model.
 
 Export Figure 7-style best/worst qualitative samples from any eval directory:
 
@@ -238,8 +244,8 @@ tests/                     Regression tests for the current behavior
 
 ## Immediate Next Steps
 
-1. Improve arithmetic verification in the recovery traces so the model stops writing plausible but false “verified” equations.
+1. Improve arithmetic supervision with stronger SFT mix quality and step-level verifier-aware reward so the model stops writing plausible but false “verified” equations.
 2. Add or fetch a stronger Countdown-native expert-trace source with verified target-correct recoveries.
-3. Scale from local CPU pilots to a larger target-model train/eval run once stronger traces are available.
+3. Scale from local CPU pilots to the larger target-model train/eval run once stronger traces are available.
 4. Run a broader raw-versus-reset-aware comparison on a larger hard Countdown slice.
-5. Use the extension comparison utility to scale full reset, selective retention, and memory-aware clean-loop comparisons.
+5. Use the extension comparison utility only after the baseline itself shows nontrivial hard correctness.
