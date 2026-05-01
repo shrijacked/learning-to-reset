@@ -7,6 +7,7 @@ from learning_to_reset.pipeline import (
     prepare_countdown_examples,
     prepare_sft_examples,
     split_sequence,
+    summarize_sft_example_mix,
 )
 
 
@@ -56,6 +57,7 @@ class PipelineTests(unittest.TestCase):
         self.assertNotIn("<clean>", examples[1].prompt)
         self.assertIn("<answer>", examples[1].response)
         self.assertEqual(examples[1].metadata["stage"], "retry-recovery")
+        self.assertEqual(examples[0].metadata["stage"], "base-trace")
 
     def test_prepare_sft_examples_can_repeat_retry_recovery_examples(self) -> None:
         records = (
@@ -126,6 +128,70 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(len(recovery_examples), 1)
         self.assertEqual(recovery_examples[0].metadata["source_id"], "trace-good")
         self.assertEqual(recovery_examples[0].metadata["recovery_expression"], "((7 + 2) + 1)")
+
+    def test_prepare_sft_examples_can_exclude_bootstrap_negatives(self) -> None:
+        records = (
+            TraceRecord(
+                source_id="trace-positive",
+                problem="Make 10 from 7, 2, 1",
+                raw_trace="<think>Valid.</think><answer>10</answer>",
+                is_correct=True,
+                metadata={"source": "reference"},
+            ),
+            TraceRecord(
+                source_id="trace-bootstrap-negative",
+                problem="Make 10 from 7, 2, 1",
+                raw_trace="<think>Confused.</think>",
+                is_correct=False,
+                metadata={
+                    "source": "reference",
+                    "bootstrap_kind": "think_only_negative",
+                },
+            ),
+        )
+
+        examples = prepare_sft_examples(
+            records,
+            exclude_bootstrap_negatives=True,
+        )
+
+        self.assertEqual(len(examples), 1)
+        self.assertEqual(examples[0].metadata["source_id"], "trace-positive")
+
+    def test_summarize_sft_example_mix_reports_source_stage_and_clean_counts(self) -> None:
+        examples = (
+            prepare_sft_examples(
+                (
+                    TraceRecord(
+                        source_id="trace-positive",
+                        problem="Make 10 from 7, 2, 1",
+                        raw_trace="<think>Valid.</think><answer>10</answer>",
+                        is_correct=True,
+                        metadata={"source": "reference"},
+                    ),
+                )
+            )[0],
+            prepare_sft_examples(
+                (
+                    TraceRecord(
+                        source_id="trace-negative",
+                        problem="Make 10 from 7, 2, 1",
+                        raw_trace="<think>Wrong turn.</think><answer>9</answer>",
+                        is_correct=False,
+                        metadata={"source": "reference", "bootstrap_kind": "think_only_negative"},
+                    ),
+                )
+            )[0],
+        )
+
+        summary = summarize_sft_example_mix(examples)
+
+        self.assertEqual(summary["total_examples"], 2)
+        self.assertEqual(summary["by_source"]["reference"], 2)
+        self.assertEqual(summary["by_stage"]["base-trace"], 2)
+        self.assertEqual(summary["by_bootstrap_kind"]["think_only_negative"], 1)
+        self.assertEqual(summary["by_uses_clean"]["false"], 1)
+        self.assertEqual(summary["by_uses_clean"]["true"], 1)
 
     def test_require_target_correct_recovery_drops_inconsistent_arithmetic_claims(
         self,

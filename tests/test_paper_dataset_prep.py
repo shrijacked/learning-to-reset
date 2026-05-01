@@ -90,6 +90,9 @@ class PaperDatasetPrepTests(unittest.TestCase):
             raw_test_payload = (
                 output_dir / "countdown-test-raw.jsonl"
             ).read_text(encoding="utf-8").splitlines()
+            sft_mix_summary = json.loads(
+                (output_dir / "sft-mix-summary.json").read_text(encoding="utf-8")
+            )
 
         self.assertEqual(manifest["countdown"]["test"], 1)
         self.assertEqual(len(test_payload), 1)
@@ -98,6 +101,8 @@ class PaperDatasetPrepTests(unittest.TestCase):
         self.assertEqual(len(raw_test_payload), 1)
         self.assertIn('"source_id": "c3"', raw_test_payload[0])
         self.assertNotIn("emit <clean>", raw_test_payload[0])
+        self.assertIn("before_filter", sft_mix_summary)
+        self.assertIn("after_filter", sft_mix_summary)
 
     def test_export_paper_prepared_datasets_writes_hard_eval_slice(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -419,6 +424,96 @@ class PaperDatasetPrepTests(unittest.TestCase):
         self.assertTrue(manifest["require_recovery_target_correct"])
         self.assertEqual(sum('"stage": "retry-recovery"' in line for line in sft_train_lines), 1)
         self.assertTrue(any('"source_id": "good"' in line for line in sft_train_lines))
+
+    def test_export_paper_prepared_datasets_can_exclude_bootstrap_negatives(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            traces = root / "traces.jsonl"
+            countdown_train = root / "countdown-train.jsonl"
+            countdown_eval = root / "countdown-eval.jsonl"
+            output_dir = root / "prepared"
+
+            traces.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "source_id": "positive",
+                                "problem": "Reach 10.",
+                                "raw_trace": "<think>Valid.</think><answer>10</answer>",
+                                "is_correct": True,
+                                "metadata": {"source": "reference"},
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "source_id": "bootstrap-negative",
+                                "problem": "Reach 10.",
+                                "raw_trace": "<think>Confused.</think>",
+                                "is_correct": False,
+                                "metadata": {
+                                    "source": "reference",
+                                    "bootstrap_kind": "think_only_negative",
+                                },
+                            }
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            countdown_train.write_text(
+                json.dumps(
+                    {
+                        "source_id": "c1",
+                        "numbers": [6, 7],
+                        "target": 42,
+                        "question": "Reach 42 using 6, 7.",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            countdown_eval.write_text(
+                json.dumps(
+                    {
+                        "source_id": "c2",
+                        "numbers": [9, 8, 3, 1],
+                        "target": 24,
+                        "question": "Reach 24 using 9, 8, 3, 1.",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            manifest = export_paper_prepared_datasets(
+                trace_path=traces,
+                countdown_train_path=countdown_train,
+                countdown_eval_path=countdown_eval,
+                output_dir=output_dir,
+                sft_val_ratio=0.0,
+                countdown_val_ratio=0.0,
+                allow_clean=True,
+                exclude_bootstrap_negatives=True,
+            )
+            sft_train_lines = (output_dir / "sft-train.jsonl").read_text(encoding="utf-8").splitlines()
+            sft_mix_summary = json.loads(
+                (output_dir / "sft-mix-summary.json").read_text(encoding="utf-8")
+            )
+
+        self.assertTrue(manifest["exclude_bootstrap_negatives"])
+        self.assertEqual(manifest["sft"]["train"], 1)
+        self.assertEqual(len(sft_train_lines), 1)
+        self.assertIn('"source_id": "positive"', sft_train_lines[0])
+        self.assertEqual(
+            sft_mix_summary["before_filter"]["by_bootstrap_kind"]["think_only_negative"],
+            1,
+        )
+        self.assertEqual(
+            sft_mix_summary["after_filter"].get("by_bootstrap_kind", {}),
+            {},
+        )
 
 
 if __name__ == "__main__":

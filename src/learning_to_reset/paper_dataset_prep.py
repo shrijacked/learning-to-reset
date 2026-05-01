@@ -9,7 +9,11 @@ from typing import Any, Dict
 from learning_to_reset.countdown_slices import filter_hard_countdown_samples
 from learning_to_reset.data import load_countdown_samples, load_trace_records
 from learning_to_reset.dataset_prep import write_prompt_examples_jsonl
-from learning_to_reset.pipeline import prepare_countdown_examples, prepare_sft_examples
+from learning_to_reset.pipeline import (
+    prepare_countdown_examples,
+    prepare_sft_examples,
+    summarize_sft_example_mix,
+)
 
 
 def _train_validation_split(items, *, val_ratio: float):
@@ -34,17 +38,27 @@ def export_paper_prepared_datasets(
     include_recovery_examples: bool = False,
     recovery_repeat: int = 1,
     require_recovery_target_correct: bool = False,
+    exclude_bootstrap_negatives: bool = False,
 ) -> Dict[str, Any]:
     """Prepare artifacts using distinct Countdown train/eval source files."""
 
     output_root = Path(output_dir)
     output_root.mkdir(parents=True, exist_ok=True)
 
-    trace_examples = prepare_sft_examples(
-        load_trace_records(trace_path),
+    trace_records = load_trace_records(trace_path)
+    trace_examples_before_filter = prepare_sft_examples(
+        trace_records,
         include_recovery_examples=include_recovery_examples,
         recovery_repeat=recovery_repeat,
         require_recovery_target_correct=require_recovery_target_correct,
+        exclude_bootstrap_negatives=False,
+    )
+    trace_examples = prepare_sft_examples(
+        trace_records,
+        include_recovery_examples=include_recovery_examples,
+        recovery_repeat=recovery_repeat,
+        require_recovery_target_correct=require_recovery_target_correct,
+        exclude_bootstrap_negatives=exclude_bootstrap_negatives,
     )
     sft_train, sft_validation = _train_validation_split(trace_examples, val_ratio=sft_val_ratio)
 
@@ -130,6 +144,16 @@ def export_paper_prepared_datasets(
         countdown_hard_eval_raw_examples, output_root / "countdown-test-hard-raw.jsonl"
     )
 
+    sft_mix_summary = {
+        "before_filter": summarize_sft_example_mix(trace_examples_before_filter),
+        "after_filter": summarize_sft_example_mix(trace_examples),
+        "exclude_bootstrap_negatives": exclude_bootstrap_negatives,
+    }
+    (output_root / "sft-mix-summary.json").write_text(
+        json.dumps(sft_mix_summary, indent=2, ensure_ascii=True) + "\n",
+        encoding="utf-8",
+    )
+
     manifest = {
         "sft": {
             "train": len(sft_train),
@@ -147,6 +171,7 @@ def export_paper_prepared_datasets(
         "include_recovery_examples": include_recovery_examples,
         "recovery_repeat": recovery_repeat,
         "require_recovery_target_correct": require_recovery_target_correct,
+        "exclude_bootstrap_negatives": exclude_bootstrap_negatives,
         "sft_val_ratio": sft_val_ratio,
         "countdown_val_ratio": countdown_val_ratio,
         "hard_mine_ratio": hard_mine_ratio,
