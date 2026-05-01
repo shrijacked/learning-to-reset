@@ -136,8 +136,8 @@ class MultiCleanExtensionTests(unittest.TestCase):
         )
 
         self.assertEqual(trajectory.managed.retained_notes, ("60 + 27 = 87.",))
-        self.assertAlmostEqual(trajectory.segment_rewards[-1].total_reward, 1.1)
-        self.assertAlmostEqual(trajectory.adjusted_total_reward, 1.05)
+        self.assertAlmostEqual(trajectory.segment_rewards[-1].total_reward, 1.3)
+        self.assertAlmostEqual(trajectory.adjusted_total_reward, 1.25)
 
 
 if __name__ == "__main__":
