@@ -91,6 +91,35 @@ class RLOORuntimeTests(unittest.TestCase):
 
         self.assertTrue(math.isclose(candidate.policy_trajectory.retry_reward or 0.0, 1.1))
 
+    def test_build_rollout_candidate_can_use_arithmetic_reward_for_policy(self) -> None:
+        example = {
+            "prompt": build_reasoning_prompt(
+                "Reach 10 using 7, 2, 1.",
+                allow_clean=True,
+            ),
+            "response": "",
+            "metadata": {
+                "source_id": "c2b",
+                "numbers": (7, 2, 1),
+                "target": 10,
+                "question": "Reach 10 using 7, 2, 1.",
+            },
+        }
+
+        candidate = build_rollout_candidate(
+            type("PromptExampleStub", (), example)(),
+            initial_response="<think>Confusing.</think><clean>",
+            initial_token_ids=(1, 2),
+            retry_response=(
+                "<think>Compute 7 + 2 = 9. Compute 9 + 1 = 10.</think>"
+                "<answer>((7 + 2) + 1)</answer>"
+            ),
+            retry_token_ids=(3, 4, 5),
+            reward_mode="arithmetic",
+        )
+
+        self.assertTrue(math.isclose(candidate.policy_trajectory.retry_reward or 0.0, 1.2))
+
     def test_compute_policy_loss_matches_segment_scales(self) -> None:
         class Term:
             def __init__(self, initial_scale: float, retry_scale: float) -> None:
@@ -153,6 +182,7 @@ class RLOORuntimeTests(unittest.TestCase):
         self.assertAlmostEqual(summary["clean_rate"], 0.5)
         self.assertAlmostEqual(summary["accuracy"], 0.5)
         self.assertAlmostEqual(summary["average_score"], 0.55)
+        self.assertIn("average_arithmetic_claim_reward", summary)
         self.assertEqual(summary["clean_trajectory_count"], 1)
 
     def test_evaluate_rollout_candidates_reports_evaluated_values(self) -> None:
@@ -226,11 +256,42 @@ class RLOORuntimeTests(unittest.TestCase):
         summary = evaluate_rollout_candidates((cleaned, direct))
 
         self.assertIn("score_when_cleaned", summary)
+        self.assertIn("average_arithmetic_claim_reward", summary)
         self.assertGreater(summary["score_when_cleaned"], 0.0)
         self.assertAlmostEqual(
             summary["score_when_cleaned"],
             cleaned.clean_trajectory.final_reward.total_reward,
         )
+
+    def test_evaluate_rollout_candidates_reports_arithmetic_claim_metrics(self) -> None:
+        candidate = build_rollout_candidate(
+            type(
+                "PromptExampleStub",
+                (),
+                {
+                    "prompt": build_reasoning_prompt("Reach 10 using 7, 2, 1.", allow_clean=True),
+                    "response": "",
+                    "metadata": {
+                        "source_id": "c6",
+                        "numbers": (7, 2, 1),
+                        "target": 10,
+                        "question": "Reach 10 using 7, 2, 1.",
+                    },
+                },
+            )(),
+            initial_response=(
+                "<think>Compute 7 + 2 = 9. Compute 9 + 1 = 10.</think>"
+                "<answer>((7 + 2) + 1)</answer>"
+            ),
+            initial_token_ids=(1, 2, 3),
+        )
+
+        summary = evaluate_rollout_candidates((candidate,))
+
+        self.assertAlmostEqual(summary["average_arithmetic_claim_reward"], 0.2)
+        self.assertEqual(summary["results"][0]["arithmetic_claims_total"], 2)
+        self.assertEqual(summary["results"][0]["arithmetic_claims_correct"], 2)
+        self.assertEqual(summary["results"][0]["arithmetic_claims_incorrect"], 0)
 
 
 if __name__ == "__main__":

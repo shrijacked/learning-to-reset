@@ -68,8 +68,19 @@ def build_policy_trajectory_sample(
             if clean_trajectory.retry_reward is not None
             else None
         )
+    elif reward_mode == "arithmetic":
+        initial_reward = (
+            clean_trajectory.initial_reward.correctness_reward
+            + clean_trajectory.initial_reward.arithmetic_claim_reward
+        )
+        retry_reward = (
+            clean_trajectory.retry_reward.correctness_reward
+            + clean_trajectory.retry_reward.arithmetic_claim_reward
+            if clean_trajectory.retry_reward is not None
+            else None
+        )
     else:
-        raise ValueError("reward_mode must be 'correctness' or 'total'.")
+        raise ValueError("reward_mode must be 'correctness', 'total', or 'arithmetic'.")
 
     return TrajectorySample(
         initial_reward=initial_reward,
@@ -157,6 +168,9 @@ def summarize_rollout_candidates(
     clean_count = sum(int(rollout.cleaned) for rollout in rollouts)
     initial_tokens = sum(len(rollout.initial.token_ids) for rollout in rollouts)
     retry_tokens = sum(len(rollout.retry.token_ids) for rollout in rollouts if rollout.retry is not None)
+    arithmetic_claim_reward = sum(
+        rollout.clean_trajectory.final_reward.arithmetic_claim_reward for rollout in rollouts
+    )
 
     return {
         "responses_per_prompt": total,
@@ -175,6 +189,9 @@ def summarize_rollout_candidates(
             sum(rollout.clean_trajectory.final_reward.total_reward for rollout in rollouts) / total
             if total
             else 0.0
+        ),
+        "average_arithmetic_claim_reward": (
+            arithmetic_claim_reward / total if total else 0.0
         ),
         "average_initial_tokens": (initial_tokens / total) if total else 0.0,
         "average_retry_tokens": (retry_tokens / clean_count) if clean_count else 0.0,
@@ -429,6 +446,7 @@ def evaluate_rollout_candidates(rollouts: Sequence[RolloutCandidate]) -> Dict[st
     total_score = 0.0
     cleaned = 0
     cleaned_score_total = 0.0
+    arithmetic_claim_reward_total = 0.0
     results = []
 
     for rollout in rollouts:
@@ -437,6 +455,9 @@ def evaluate_rollout_candidates(rollouts: Sequence[RolloutCandidate]) -> Dict[st
         correct += int(verification.is_valid and verification.reaches_target)
         valid += int(verification.is_valid)
         total_score += score
+        arithmetic_claim_reward_total += (
+            rollout.clean_trajectory.final_reward.arithmetic_claim_reward
+        )
         cleaned += int(rollout.cleaned)
         if rollout.cleaned:
             cleaned_score_total += score
@@ -454,6 +475,10 @@ def evaluate_rollout_candidates(rollouts: Sequence[RolloutCandidate]) -> Dict[st
                 "reaches_target": verification.reaches_target,
                 "reason": verification.reason,
                 "score": score,
+                "arithmetic_claim_reward": rollout.clean_trajectory.final_reward.arithmetic_claim_reward,
+                "arithmetic_claims_total": rollout.clean_trajectory.final_reward.arithmetic_claims_total,
+                "arithmetic_claims_correct": rollout.clean_trajectory.final_reward.arithmetic_claims_correct,
+                "arithmetic_claims_incorrect": rollout.clean_trajectory.final_reward.arithmetic_claims_incorrect,
             }
         )
 
@@ -464,6 +489,9 @@ def evaluate_rollout_candidates(rollouts: Sequence[RolloutCandidate]) -> Dict[st
         "accuracy": (correct / total) if total else 0.0,
         "valid_rate": (valid / total) if total else 0.0,
         "average_score": (total_score / total) if total else 0.0,
+        "average_arithmetic_claim_reward": (
+            arithmetic_claim_reward_total / total if total else 0.0
+        ),
         "clean_rate": (cleaned / total) if total else 0.0,
         "score_when_cleaned": (cleaned_score_total / cleaned) if cleaned else 0.0,
         "results": results,
@@ -744,7 +772,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-grad-norm", type=float, default=1.0, help="Gradient clipping norm.")
     parser.add_argument(
         "--reward-mode",
-        choices=("correctness", "total"),
+        choices=("correctness", "total", "arithmetic"),
         default="correctness",
         help="Reward component used for policy gradients.",
     )

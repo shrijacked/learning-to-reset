@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from fractions import Fraction
+import re
 
 from learning_to_reset.context_manager import manage_single_clean_cycle
 from learning_to_reset.countdown_verifier import score_countdown_response
@@ -16,6 +18,10 @@ DEFAULT_BASE_INSTRUCTIONS = (
 DEFAULT_CLEAN_INSTRUCTIONS = (
     "If your search becomes confusing or unproductive, explain the reset and emit <clean>."
 )
+_ARITHMETIC_CLAIM_PATTERN = re.compile(
+    r"(?<![\d/])(-?\d+(?:/\d+)?)\s*([+\-*/])\s*(-?\d+(?:/\d+)?)\s*=\s*"
+    r"(-?\d+(?:/\d+)?)(?![\d/])"
+)
 
 
 @dataclass(frozen=True)
@@ -25,6 +31,10 @@ class RewardBreakdown:
     total_reward: float
     format_reward: float
     correctness_reward: float
+    arithmetic_claim_reward: float
+    arithmetic_claims_total: int
+    arithmetic_claims_correct: int
+    arithmetic_claims_incorrect: int
     has_valid_format: bool
     is_correct: bool
     verification_reason: str
@@ -42,25 +52,87 @@ class CleanTrajectory:
     trajectory_sample: TrajectorySample
 
 
+def score_arithmetic_claims(
+    text: str,
+    *,
+    max_reward: float = 0.2,
+) -> tuple[float, int, int, int]:
+    """Score plain inline arithmetic claims with a bounded dense reward.
+
+    Reward is normalized over matched claims so extra claim volume alone does
+    not increase reward. Correct claims contribute positively, incorrect claims
+    contribute negatively, and responses with no matched claims receive 0.
+    """
+
+    matches = list(_ARITHMETIC_CLAIM_PATTERN.finditer(text))
+    if not matches:
+        return 0.0, 0, 0, 0
+
+    correct = 0
+    incorrect = 0
+    for match in matches:
+        try:
+            left = Fraction(match.group(1))
+            right = Fraction(match.group(3))
+            claimed = Fraction(match.group(4))
+        except (ValueError, ZeroDivisionError):
+            incorrect += 1
+            continue
+
+        op = match.group(2)
+        if op == "+":
+            actual = left + right
+        elif op == "-":
+            actual = left - right
+        elif op == "*":
+            actual = left * right
+        elif op == "/":
+            if right == 0:
+                incorrect += 1
+                continue
+            actual = left / right
+        else:
+            incorrect += 1
+            continue
+
+        if actual == claimed:
+            correct += 1
+        else:
+            incorrect += 1
+
+    total = len(matches)
+    reward = max_reward * ((correct - incorrect) / total)
+    return reward, total, correct, incorrect
+
+
 def compute_countdown_reward(
     response: str,
     sample: CountdownSample,
     *,
     formatting_reward: float = 0.1,
     correctness_reward: float = 1.0,
+    arithmetic_claim_max_reward: float = 0.2,
 ) -> RewardBreakdown:
     """Compute formatting and correctness rewards for a tagged response."""
 
     has_valid_format = "<answer>" in response and "</answer>" in response
     verification = score_countdown_response(response, sample)
     correct = verification.is_valid and verification.reaches_target
+    arithmetic_claim_reward, claim_total, claim_correct, claim_incorrect = score_arithmetic_claims(
+        response,
+        max_reward=arithmetic_claim_max_reward,
+    )
 
     format_value = formatting_reward if has_valid_format else 0.0
     correct_value = correctness_reward if correct else 0.0
     return RewardBreakdown(
-        total_reward=format_value + correct_value,
+        total_reward=format_value + correct_value + arithmetic_claim_reward,
         format_reward=format_value,
         correctness_reward=correct_value,
+        arithmetic_claim_reward=arithmetic_claim_reward,
+        arithmetic_claims_total=claim_total,
+        arithmetic_claims_correct=claim_correct,
+        arithmetic_claims_incorrect=claim_incorrect,
         has_valid_format=has_valid_format,
         is_correct=correct,
         verification_reason=verification.reason,
