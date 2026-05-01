@@ -5,8 +5,8 @@
 #   1. Fetch paper-aligned source datasets       (paper_sources --scale paper)
 #   2. Prepare SFT + Countdown artifacts         (prepare_paper_artifacts --scale paper)
 #   3. SFT on grounded recovery traces           (sft_runtime)
-#   4. Baseline raw eval to mine failures        (eval_runtime --raw-generation)
-#   5. Mine recovery traces from failures        (failure_recovery_traces --exclude-source-ids)
+#   4. Baseline raw eval on hard-mine            (eval_runtime --raw-generation)
+#   5. Mine recovery traces from hard-mine       (failure_recovery_traces --exclude-source-ids)
 #   6. Re-SFT on combined corpus                 (sft_runtime)
 #   7. Reset-aware RLOO                          (rloo_runtime)
 #   8. Final reset-aware eval (multi-clean)      (eval_runtime --max-clean-tries 3)
@@ -182,7 +182,7 @@ run_cmd "$PYTHON" -m learning_to_reset.sft_runtime \
 ###############################################################################
 check_cli "eval_runtime" "$PYTHON" -m learning_to_reset.eval_runtime
 run_cmd "$PYTHON" -m learning_to_reset.eval_runtime \
-    --prepared-countdown "$ARTIFACTS_DIR/countdown-test-hard.jsonl" \
+    --prepared-countdown "$ARTIFACTS_DIR/countdown-mine-hard.jsonl" \
     --model "$SFT_DIR" \
     --output-dir "$EVAL_RAW_DIR" \
     --max-new-tokens 384 \
@@ -193,7 +193,7 @@ run_cmd "$PYTHON" -m learning_to_reset.eval_runtime \
 ###############################################################################
 check_cli "failure_recovery_traces" "$PYTHON" -m learning_to_reset.failure_recovery_traces
 run_cmd "$PYTHON" -m learning_to_reset.failure_recovery_traces \
-    --prepared-countdown "$ARTIFACTS_DIR/countdown-train.jsonl" \
+    --prepared-countdown "$ARTIFACTS_DIR/countdown-mine-hard.jsonl" \
     --eval-results "$EVAL_RAW_DIR/results.jsonl" \
     --output-path "$MINED_TRACES_PATH" \
     --recovery-style "$RECOVERY_STYLE" \

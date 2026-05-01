@@ -13,6 +13,7 @@ SCALE_PRESETS: Dict[str, Dict[str, Any]] = {
     "pilot": {
         "sft_val_ratio": 0.1,
         "countdown_val_ratio": 0.1,
+        "hard_mine_ratio": 0.2,
         "recovery_repeat": 1,
         "include_recovery_examples": False,
         "require_recovery_target_correct": False,
@@ -20,6 +21,7 @@ SCALE_PRESETS: Dict[str, Dict[str, Any]] = {
     "paper": {
         "sft_val_ratio": 0.05,
         "countdown_val_ratio": 0.05,
+        "hard_mine_ratio": 0.2,
         "recovery_repeat": 4,
         "include_recovery_examples": True,
         "require_recovery_target_correct": True,
@@ -77,6 +79,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Validation ratio carved out of the Countdown train file.",
     )
     parser.add_argument(
+        "--hard-mine-ratio",
+        type=float,
+        default=None,
+        help=(
+            "Fraction of the hard Countdown training slice reserved for failure mining "
+            "instead of hard-train."
+        ),
+    )
+    parser.add_argument(
         "--disallow-clean",
         action="store_true",
         help="Do not include clean instructions in prepared Countdown prompts.",
@@ -123,6 +134,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         overrides={
             "sft_val_ratio": args.sft_val_ratio,
             "countdown_val_ratio": args.countdown_val_ratio,
+            "hard_mine_ratio": args.hard_mine_ratio,
             "recovery_repeat": args.recovery_repeat,
             "include_recovery_examples": args.include_recovery_examples,
             "require_recovery_target_correct": args.require_recovery_target_correct,
@@ -135,6 +147,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         output_dir=args.output_dir,
         sft_val_ratio=configured["sft_val_ratio"],
         countdown_val_ratio=configured["countdown_val_ratio"],
+        hard_mine_ratio=configured["hard_mine_ratio"],
         allow_clean=not args.disallow_clean,
         include_recovery_examples=bool(configured["include_recovery_examples"]),
         recovery_repeat=int(configured["recovery_repeat"]),
