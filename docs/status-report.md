@@ -48,6 +48,12 @@ Implemented and verified:
 - a paper-claim traceability document mapping every `main.pdf` Section 3/4 claim to its file and test
 - a paper-replication runbook covering hardware, wall-clock, expected hard-Countdown band, and verification checks
 - GitHub repository setup and CI for the test suite
+- explicit paper-artifact export of disjoint `countdown-train-hard.jsonl`, `countdown-mine-hard.jsonl`, and `countdown-test-hard.jsonl`
+- true raw-baseline prepared Countdown variants with `allow_clean=False` for arithmetic-only evaluation
+- SFT mix auditing (`sft-mix-summary.json`) plus metadata-preserving prepared examples for source/stage/style/bootstrap analysis
+- a paper-style SFT skew-reduction lever that excludes bootstrap-generated `think_only_negative` examples
+- a bounded arithmetic-claim reward for inline `a op b = c` statements, exposed through rollout summaries and an `arithmetic` RLOO reward mode
+- a pre-RLOO hard-correctness gate in `scripts/replicate_paper.sh` with override knobs for ablation-only bypasses
 
 ## Working Baseline
 
@@ -81,10 +87,15 @@ What works today:
 - fallback SFT preparation can append retry-stage recovery examples and rebalance them explicitly
 - fallback SFT preparation can require retry-stage recovery examples to verify against Countdown numbers and target before appending them
 - paper-aligned artifact prep now writes `countdown-test-hard.jsonl` beside the full eval set
+- paper-aligned artifact prep now also writes disjoint `countdown-train-hard.jsonl` and `countdown-mine-hard.jsonl` so failure mining and untouched final evaluation use separate hard slices
 - the held-out hard slice can now be scored in both raw one-pass mode and reset-aware retry mode from the same checkpoint
+- the repo can now prepare true raw-baseline prompt files that explicitly disallow `<clean>`, so raw arithmetic can be measured separately from reset behavior
 - verifier-grounded SFT ablations can now be compared against the expanded SFT and RLOO checkpoints
 - contrastive recovery SFT ablations can now be compared against the expanded SFT and verifier-grounded checkpoints
 - extension trajectories can now be compared in a shared reward table before scaling to larger train/eval runs
+- paper-style artifact prep now emits `sft-mix-summary.json` and can exclude bootstrap clean-only negatives from the final SFT mix
+- reset-aware rollout reward can now include dense arithmetic-claim scoring rather than final-answer correctness alone
+- the default replication flow now blocks RLOO when post-SFT hard-retry correctness is still below a nontrivial floor
 
 What is not implemented yet:
 
@@ -159,6 +170,8 @@ Interpretation:
 - the fresh hard holdout shows a small target-correct improvement, but most retry responses still state false verified equations, so arithmetic verification is still the main blocker
 - the main remaining baseline blocker is arithmetic grounding: the model often writes plausible step-by-step claims, but the verifier-computed expression value does not match the target
 - the grounded recovery template increases structural supervision (substeps, rejected hypothesis, budget, final check) but at Qwen2.5-0.5B the model still copies the shape while lying on intermediate `Compute` lines; deep-verify cleans training data but cannot fix inference-time fabrication — the next bet is step-level verifier reward or a larger model, not another passive template tweak alone
+- the repo now has the code-level levers that this diagnosis calls for: explicit hard train/mine/holdout separation, true raw arithmetic-only baselines, SFT mix auditing with bootstrap-negative filtering, dense arithmetic-claim reward, and a pre-RLOO hard-correctness gate
+- these May 2026 changes improve experiment quality and prioritization, but they do **not** yet constitute a new documented correctness win; the best local hard-holdout result remains the previously recorded `1/32`
 - the first extension module remains separate from the baseline path, so future multi-clean work can proceed without destabilizing the one-shot baseline
 - the second extension module now supports explicit retained notes after clean, while still avoiding full scratchpad carryover
 - the recall-aware memory module now provides a runnable external-memory clean-loop baseline for future extension experiments

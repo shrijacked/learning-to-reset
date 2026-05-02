@@ -29,6 +29,9 @@
   - reference trace fetch plus paired trace bootstrap
   - paper-aligned artifact preparation from separate train/eval files
   - automatic `countdown-test-hard.jsonl` export for multiplication/division-heavy evals
+  - disjoint `countdown-train-hard.jsonl` / `countdown-mine-hard.jsonl` / `countdown-test-hard.jsonl` export for clean mining vs final evaluation
+  - true raw-baseline prepared prompts with `allow_clean=False`
+  - `sft-mix-summary.json` plus a paper-style filter that excludes bootstrap clean-only negatives
   - a tiny live fetch -> bootstrap -> prep smoke run
 - Trainer outputs can now be evaluated directly from the run root because nested checkpoints resolve automatically.
 - Fallback SFT prep can now:
@@ -68,6 +71,12 @@
   - `15` solver-verified recovery records mined from the `3` failed hard eval examples
   - plus-mined artifact set prepared with `1356` SFT train examples and `151` validation examples
   - these are for the next training cycle, not for reporting on the same mined hard examples
+- Reward shaping is now stronger for arithmetic:
+  - inline arithmetic claims like `a op b = c` can receive dense bounded reward
+  - reset-aware RLOO now has an `arithmetic` reward mode
+- The default replication workflow is now stricter:
+  - pre-RLOO hard-correctness gate requires a nontrivial hard-retry signal before RL starts
+  - override knobs exist for ablation-only bypasses
 - Fresh hard-holdout plus-mined SFT completed:
   - fresh hard holdout has `32/32` hard examples
   - SFT finished with `train_loss = 0.0575` and `eval_loss = 0.1096`
@@ -105,6 +114,7 @@
 - Failure mining now gives targeted recovery data, but the next metric needs a fresh hard holdout to avoid leakage.
 - On the fresh hard holdout, plus-mined SFT reached `29/32` valid and `1/32` correct with reset-aware retry.
 - Current blocker: arithmetic grounding on unseen hard Countdown prompts, not reset formatting.
+- The May 2026 repo changes improved data boundaries, raw-baseline measurement, SFT-mix observability, reward density, and RL gating, but they did not yet produce a new documented correctness gain beyond the existing `1/32` local hard-holdout result.
 
 ## Non-Engineering Leftovers
 

@@ -95,6 +95,11 @@ The script writes to a single `--out-dir`. Layout:
 runs/replicate-paper-YYYY-MM-DD/
 ├── sources/                   # raw HF datasets, paper scale
 ├── artifacts/                 # prepared SFT + Countdown JSONL
+│   ├── countdown-train-hard.jsonl
+│   ├── countdown-mine-hard.jsonl
+│   ├── countdown-test-hard.jsonl
+│   ├── countdown-test-hard-raw.jsonl
+│   └── sft-mix-summary.json
 ├── sft/                       # checkpoint after pass 1
 ├── mined-recovery-traces.jsonl# deep-verify-filtered failures
 ├── sft-train-combined.jsonl   # sft-train + mined recoveries
@@ -118,6 +123,9 @@ shape. Failures here mean re-run that step before moving on.
 | 1    | `sources/countdown-eval.jsonl`               | `wc -l` ≈ 3_000                                   |
 | 2    | `artifacts/sft-train.jsonl`                  | `wc -l` ≥ 50_000                                  |
 | 2    | `artifacts/manifest.json`                    | `"scale": "paper"`                                |
+| 2    | `artifacts/sft-mix-summary.json`             | review source/stage/style skew before training     |
+| 2    | `artifacts/countdown-mine-hard.jsonl`        | distinct from `countdown-test-hard.jsonl`         |
+| 2    | `artifacts/countdown-test-hard-raw.jsonl`    | raw prompts contain no `<clean>` instructions     |
 | 3    | `sft/pytorch_model.bin` (or shards)          | `ls -la` ≥ 1.5 GB                                 |
 | 4    | `eval-raw/summary.json`                      | raw hard-mine baseline present                    |
 | 5    | `mined-recovery-traces.jsonl`                | `wc -l` ≥ 1_000                                   |
@@ -144,6 +152,35 @@ Override knobs:
 
 Bypassing the gate is for ablations only; the default workflow is to improve
 SFT/data/reward first if the gate fails.
+
+### Hard-split roles
+
+The paper-prep path now exports three disjoint hard subsets:
+
+- `countdown-train-hard.jsonl` for hard-example supervised training
+- `countdown-mine-hard.jsonl` for raw baseline eval + failure mining
+- `countdown-test-hard.jsonl` for untouched final retry-aware evaluation
+
+This separation is important locally because mining on the same hard slice used
+for final reporting contaminates the result. The default workflow therefore
+mines only from `countdown-mine-hard.jsonl` and reserves
+`countdown-test-hard.jsonl` for final metrics.
+
+### True raw baseline
+
+The artifact-prep flow also exports raw-baseline prompt files with
+`allow_clean=False`, including `countdown-test-hard-raw.jsonl`. Use these when
+you want to measure arithmetic ability without reset behavior. The repo's older
+local pilots showed that "raw generation" is hard to interpret if the prompt
+still invites `<clean>` but the runtime no longer honors it.
+
+### SFT mix audit
+
+Artifact preparation writes `sft-mix-summary.json`, which summarizes the final
+prepared SFT mix by source, stage, recovery style, bootstrap kind, and clean
+usage. The paper preset also excludes bootstrap-generated
+`think_only_negative` examples by default so the paper-style SFT mix is less
+dominated by clean-only supervision.
 
 ## 6. Dry-run smoke test (no GPU required)
 
@@ -188,6 +225,8 @@ improving correctness at `0.5B`.
 | `failure_recovery_traces` aborts on overlap          | source_ids leaked into train slice          | regenerate the holdout (`paper_sources --scale ...`) |
 | `eval-final` accuracy plateaus at ~13%               | RLOO never converged                         | inspect `rloo/eval_log.json`; raise `--steps`        |
 | RLOO never starts                                    | pre-RLOO hard-correctness gate failed       | improve SFT/data/reward first, or intentionally override the gate |
+| Raw baseline looks artificially invalid              | raw prompt still allows `<clean>`           | use `*-raw.jsonl` prepared splits with `allow_clean=False`        |
+| Failure mining produces weak/empty recoveries        | mine/eval hard slices were mixed            | verify `countdown-mine-hard.jsonl` and `countdown-test-hard.jsonl` stay disjoint |
 | Multi-clean decoder hangs                            | `--max-clean-tries` too high with greedy    | drop to `--max-clean-tries 2`                        |
 | Score is high but `clean_rate` is 0                  | model never emits `<clean>`                 | recheck SFT data, ensure recovery examples included  |
 

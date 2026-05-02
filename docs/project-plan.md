@@ -60,6 +60,11 @@ flowchart LR
 | R17 | Multi-clean evaluation decoder + Figure 6 metrics | `main.pdf` Section 3.4, Section 4 (Figure 6) | `eval_runtime` (`--max-clean-tries`, `score_when_cleaned`, `clean_rate`), `multi_clean_extension.manage_bounded_clean_cycles` | `tests/test_eval_runtime.py` (multi-clean + cleaned-score suites) |
 | R18 | Contamination-guarded failure mining + qualitative export | `main.pdf` Section 4.3.1, Figure 7 | `failure_recovery_traces` (`--exclude-source-ids`), `scripts/export_qualitative_samples.py` | `tests/test_failure_recovery_traces.py` (contamination guard), `tests/test_export_qualitative_samples.py` |
 | R19 | Paper-faithful replication path (scale presets, runbook, dry-run) | `main.pdf` Section 4.1, Section 4.3 | `paper_sources --scale`, `prepare_paper_artifacts --scale`, `scripts/replicate_paper.sh`, `docs/paper-replication.md`, `docs/paper-claims-traceability.md` | `tests/test_paper_scale_presets.py`, `tests/test_replicate_paper_dry_run.py` (gated by `LTR_REPLICATE_DRY_RUN=1`) |
+| R20 | Export disjoint hard train/mine/holdout slices | paper-alignment + local contamination findings | `paper_dataset_prep.py`, `prepare_paper_artifacts.py`, `scripts/replicate_paper.sh` | `tests/test_paper_dataset_prep.py`, `tests/test_prepare_paper_cli.py`, `tests/test_replicate_paper_dry_run.py` |
+| R21 | Add a true raw arithmetic-only baseline | local eval diagnosis | `paper_dataset_prep.py`, `scripts/replicate_paper.sh` | `tests/test_paper_dataset_prep.py`, `tests/test_prepare_paper_cli.py`, `tests/test_replicate_paper_dry_run.py` |
+| R22 | Audit and rebalance the paper-style SFT mix | local correctness bottleneck analysis | `pipeline.py`, `paper_dataset_prep.py`, `prepare_paper_artifacts.py` | `tests/test_pipeline.py`, `tests/test_paper_dataset_prep.py`, `tests/test_prepare_paper_cli.py` |
+| R23 | Add dense arithmetic-claim reward for reset-aware rollout/RLOO | local arithmetic-grounding diagnosis | `rollout_runtime.py`, `rloo_runtime.py` | `tests/test_rollout_runtime.py`, `tests/test_rloo_runtime.py` |
+| R24 | Gate RLOO on minimum hard-retry correctness | local hard-focused RLOO negative results | `scripts/replicate_paper.sh`, `docs/paper-replication.md` | `tests/test_replicate_paper_dry_run.py`, full `python -m unittest discover -s tests -v` |
 | E1 | Add multi-step cleaning | `main.pdf` Discussion, `rl_proposal.pdf` Section 2.2 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E2 | Add selective retention after clean | `main.pdf` Discussion, Section 2.3 | `multi_clean_extension.py` | `tests/test_multi_clean_extension.py` |
 | E3 | Add recall and memory-aware context management | `main.pdf` Figure 1 and Conclusion | `memory_extension.py` | `tests/test_memory_extension.py` |
@@ -79,6 +84,7 @@ flowchart LR
 - Contrastive/all recovery ablation has run, but it regresses below the best expanded SFT result
 - Retry-stage recovery examples can now be filtered by verifier correctness before SFT artifact export
 - Paper-aligned artifact preparation now emits `countdown-test-hard.jsonl` for multiplication/division-heavy evaluation
+- Paper-aligned artifact preparation now emits disjoint `countdown-train-hard.jsonl`, `countdown-mine-hard.jsonl`, and `countdown-test-hard.jsonl`, so mining and untouched final evaluation use separate hard slices
 - Hard-focused synthetic Countdown source generation can now create multiplication/division-heavy training prompts
 - Hard-focused SFT and reset-aware RLOO have both run locally, but neither produced target-correct answers on the held-out hard slice
 - Failed hard evals can now be mined into solver-verified recovery traces for the next training cycle
@@ -89,6 +95,9 @@ flowchart LR
 - B2 closed the loop on that mine: re-SFT to `tmp/paper-runs/sft-grounded-26apr-seed219mine/` did not raise hard target-correctness above zero on either holdout under multi-clean (`0/32` on fresh-32 and `seed = 131` at `max_new_tokens = 384`, `max_clean_tries = 3`); validity improved (`31/32` vs `30/32` on fresh-32, `32/32` vs `28/32` on `seed = 131` compared to the pre-retrain grounded checkpoint). The local milestone gate (> `1/32` correct) therefore **failed** honestly — next bets remain step-level verifier reward, stronger trace sources, or 1B+ replication per R19
 - A controller-comparison runner now scores `full_reset`, `selective_retention`, and `memory` on identical multi-clean segments; on the fresh-32 results all three tied at `mean_adjusted_reward ≈ 0.05`, confirming that swapping controllers on already-fabricated segments cannot beat the substep-fabrication ceiling
 - A paper-faithful replication path (R19) is now in tree: `--scale {pilot,paper}` presets on the data CLIs, an end-to-end `scripts/replicate_paper.sh` with `--dry-run`, a gated subprocess test, a hardware/wall-clock runbook (`docs/paper-replication.md`), and a paper-claim traceability doc (`docs/paper-claims-traceability.md`)
+- The paper-style prep path now writes true raw-baseline prompt files with `allow_clean=False`, writes `sft-mix-summary.json`, and can exclude bootstrap-generated clean-only negatives from the final SFT mix
+- Reset-aware rollout and RLOO can now score dense inline arithmetic claims, not just final-answer correctness
+- The replication path now enforces a pre-RLOO hard-correctness gate by default, with explicit override knobs for ablation-only runs
 - Remaining baseline work is step-level verifier-in-the-loop reward, larger target-model execution (1B+ via the replication path), and broader experiment comparison
 
 ### Extension
