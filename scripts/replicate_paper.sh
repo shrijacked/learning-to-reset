@@ -127,6 +127,17 @@ if [[ "${LTR_VERIFIER_FEEDBACK:-0}" == "1" ]]; then
     VERIFIER_FEEDBACK_FLAG="--verifier-feedback"
 fi
 
+# Guard against common misspellings of LTR_VERIFIER_FEEDBACK that would otherwise
+# silently disable the only ablation lever for verifier feedback on retries.
+for _ltr_typo in VERIFIER_FEEDBACK LT_VERIFIER_FEEDBACK LTR_VERIFER_FEEDBACK \
+    LTR_VERIFIER_FEEDBCK LTR_VERIFIER_FEEEDBACK LTR_VERIFY_FEEDBACK; do
+    if [[ "${!_ltr_typo:-}" == "1" && "${LTR_VERIFIER_FEEDBACK:-0}" != "1" ]]; then
+        echo "WARNING: ${_ltr_typo}=1 is set but the canonical name is LTR_VERIFIER_FEEDBACK." >&2
+        echo "         Verifier feedback will NOT be applied. Set LTR_VERIFIER_FEEDBACK=1 instead." >&2
+    fi
+done
+unset _ltr_typo
+
 log() {
     if [[ "$DRY_RUN" -eq 1 ]]; then
         echo "[replicate_paper][dry-run] $*"
@@ -199,7 +210,7 @@ run_cmd "$PYTHON" -m learning_to_reset.paper_sources \
 check_cli "prepare_paper_artifacts" "$PYTHON" -m learning_to_reset.prepare_paper_artifacts
 run_cmd "$PYTHON" -m learning_to_reset.prepare_paper_artifacts \
     --scale "$SCALE" \
-    --traces "$SOURCES_DIR/traces.jsonl" \
+    --traces "$SOURCES_DIR/reference-traces.jsonl" \
     --countdown-train "$SOURCES_DIR/countdown-train.jsonl" \
     --countdown-eval "$SOURCES_DIR/countdown-eval.jsonl" \
     --output-dir "$ARTIFACTS_DIR"

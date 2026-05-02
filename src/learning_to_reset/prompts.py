@@ -82,6 +82,9 @@ def build_sft_training_example(
         is_correct=record.is_correct,
         base_instructions=base_instructions,
         clean_instructions=clean_instructions,
+        allow_missing_answer_for_incorrect=(
+            record.metadata.get("bootstrap_kind") == "think_only_negative"
+        ),
     )
     prompt = build_reasoning_prompt(
         record.problem,

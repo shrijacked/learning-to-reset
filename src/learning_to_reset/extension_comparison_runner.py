@@ -166,6 +166,7 @@ def run_extension_comparison_on_files(
 
     comparisons: List[ExtensionComparison] = []
     per_example: List[Dict[str, Any]] = []
+    skipped_incomplete_clean_segments = 0
 
     for paired in iter_examples_with_segments(
         prepared_path=prepared_path,
@@ -174,17 +175,23 @@ def run_extension_comparison_on_files(
         responses = list(paired.responses)
         if not responses:
             continue
-        comparison = compare_extension_trajectories(
-            sample=paired.sample,
-            base_instructions=paired.base_instructions,
-            clean_instructions=paired.clean_instructions,
-            max_cleans=max_cleans,
-            full_reset_responses=responses,
-            selective_retention_responses=responses,
-            memory_responses=responses,
-            clean_step_penalty=clean_step_penalty,
-            memory_recall_limit=memory_recall_limit,
-        )
+        try:
+            comparison = compare_extension_trajectories(
+                sample=paired.sample,
+                base_instructions=paired.base_instructions,
+                clean_instructions=paired.clean_instructions,
+                max_cleans=max_cleans,
+                full_reset_responses=responses,
+                selective_retention_responses=responses,
+                memory_responses=responses,
+                clean_step_penalty=clean_step_penalty,
+                memory_recall_limit=memory_recall_limit,
+            )
+        except ValueError as exc:
+            if "follow-up response is required" not in str(exc):
+                raise
+            skipped_incomplete_clean_segments += 1
+            continue
         comparisons.append(comparison)
         per_example.append(
             {
@@ -199,6 +206,9 @@ def run_extension_comparison_on_files(
     # Persist a flat JSON we can diff and a Markdown that mirrors Figure 6's
     # comparison style.
     summary_with_examples = dict(summary)
+    summary_with_examples[
+        "skipped_incomplete_clean_segments"
+    ] = skipped_incomplete_clean_segments
     summary_with_examples["per_example"] = per_example
     (output_root / "extension-comparison.json").write_text(
         json.dumps(summary_with_examples, indent=2, ensure_ascii=True) + "\n",
@@ -209,6 +219,7 @@ def run_extension_comparison_on_files(
         "# Extension Comparison",
         "",
         f"Total examples: **{summary['total_examples']}**",
+        f"Skipped incomplete clean-segment outputs: **{skipped_incomplete_clean_segments}**",
         "",
         "## Winners",
         "",

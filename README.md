@@ -1,110 +1,87 @@
 # Learning to Reset
 
-This repository explores dynamic context management for mathematical reasoning with a `<clean>` token, a one-shot reset manager, and reward shaping for reset-aware training.
+[![CI](https://github.com/shrijacked/learning-to-reset/actions/workflows/ci.yml/badge.svg)](https://github.com/shrijacked/learning-to-reset/actions/workflows/ci.yml)
 
-## Current Scope
+Learning to Reset is a self-contained replication workbench for the paper's core idea: let a reasoning model emit `<clean>`, discard a failing scratchpad, and retry from a clean context. The local 0.5B pilot now demonstrates the real mechanism: reset-aware retry recovers answer validity on hard Countdown prompts. The paper's 36.94% hard-Countdown result is still a separate 1B+ GPU replication target.
 
-The repository currently covers three core software primitives:
+![Reset-aware pipeline](docs/figures/pipeline.svg)
 
-- SFT trace curation that teaches the model when to emit `<clean>`
-- A one-shot context manager that handles `y0 -> optional <clean> -> y1`
-- Modified RLOO utilities that propagate the final reward through both segments
-- A synthetic Countdown-aligned fallback trace generator backed by a deterministic solver
-- Multi-solution synthetic supervision and arithmetic walkthrough trace generation
-- Verifier-grounded, contrastive, and arithmetic-grounded synthetic recovery responses (including the `grounded` style with substep arithmetic, rejected hypothesis, number-budget audit, and final-value reconciliation) for arithmetic-consistency supervision
-- A deep-verify filter that re-checks every inline `a op b = c` claim in mined or synthetic recoveries before they enter SFT
-- Hard-focused synthetic Countdown sample generation for multiplication/division-heavy training data
-- Failure-mined recovery trace generation from failed hard eval outputs
-- A bounded multi-clean extension with a reset budget and per-clean penalty
-- A selective-retention extension that carries explicit `<retain>...</retain>` notes across clean resets
-- A recall-aware memory extension with explicit `<memory>...</memory>` writes, deterministic recall, and a memory-aware clean loop
-- A comparison utility for full reset, selective retention, and memory-aware clean trajectories
-- Dataset loaders and prompt builders for trace and Countdown-style records
-- Deterministic split and batching helpers for future training/evaluation loops
-- JSONL artifact export and CLI preparation command for trainer-ready splits
-- Countdown answer verification for evaluating generated expressions
-- A deterministic hard Countdown eval slice for multiplication/division-heavy comparisons
-- SFT runtime for prepared supervised traces
-- Clean-aware reward and trajectory assembly for Countdown rollouts
-- Reset-aware RLOO runtime with local metrics and checkpointing
-- Clean-aware evaluation that retries once after `<clean>` by default
-- Per-example evaluation diagnostics that record the verifier-computed expression value
-- A comparison utility for raw one-pass versus reset-aware evaluation summaries
-- An opt-in verifier gate for retry-stage recovery examples during SFT artifact preparation
-- A multi-clean evaluation decoder (`--max-clean-tries N`) with verifier-aware first-correct early stop
-- `score_when_cleaned` and `clean_rate` metrics in the eval summary, aligned with paper Figure 6
-- A contamination guard on `failure_recovery_traces` that aborts mining when source IDs overlap a held-out slice
-- A Figure 7-style qualitative best/worst sample exporter (`scripts/export_qualitative_samples.py`)
-- A `--scale {pilot,paper}` preset on `paper_sources` and `prepare_paper_artifacts`
-- An end-to-end `scripts/replicate_paper.sh` pipeline with `--dry-run` smoke mode
+![Validity recovery](docs/figures/validity-raw-vs-reset.svg)
 
-The repository now supports the baseline pipeline over prepared artifacts: fetch paper-aligned source files, prepare data, run SFT, run reset-aware RLOO, and evaluate with the one-shot clean retry path. The main remaining work is improving arithmetic grounding and scaling those real-source paths into stronger target-model runs.
+## Results
 
-The latest local pilot now exercises that path on real fetched Countdown prompts plus expanded Countdown-aligned fallback traces. The best current CPU-only checkpoint is the expanded SFT run: raw one-pass decoding remains `0/8` valid, while reset-aware evaluation reaches `8/8` valid, `1/8` correct, and `clean_rate = 1.0` on the held-out slice. A balanced verifier-grounded ablation ties that result. Hard-focused SFT and a hard-focused reset-aware RLOO pass both completed, but neither improved target-correct arithmetic on the original 3-example hard slice. A plus-mined SFT run on a fresh 32-example hard holdout scored `29/32` valid and `1/32` correct with reset-aware retry.
+| Setup | Validity | Hard correct | Notes |
+|---|---:|---:|---|
+| raw 0.5B | 0/32 | 0/32 | no useful answer format |
+| reset-aware 0.5B | 29/32 | 1/32 | local pilot ceiling |
+| grounded local follow-up | 31/32 to 32/32 | 0/32 | better format, not better arithmetic |
+| paper 1B reported | not reported here | 36.94% | paper Section 4.3 |
+| our 1B replication | pending | pending | see Phase 3 in `docs/paper-replication.md` |
 
-At the local `Qwen/Qwen2.5-0.5B` scale, the repo now treats template-only levers as documented-but-deprioritized for correctness work. Grounded-template changes, multi-clean retries, and verifier-feedback prompt text all improved validity more than arithmetic correctness on hard holdouts. Keep those paths for reproducibility and diagnostics, but prioritize:
+The honest read: at 0.5B, reset logic fixes malformed outputs far more reliably than it fixes arithmetic. The model often writes valid-looking equations that the verifier computes as the wrong value. That is why the next correctness milestone is either stronger arithmetic supervision or the paper-faithful 1B+ run, not another prompt-template pass.
 
-1. stronger arithmetic-grounded data and SFT mix quality
-2. step-level verifier reward or other denser arithmetic supervision
-3. the paper-faithful `1.5B+` replication path when hardware is available
+## Try It
 
-## Project Docs
-
-- `docs/method-overview.md`: current method summary and implementation targets
-- `docs/code-walkthrough.md`: file-by-file explanation of the code and jargon
-- `docs/current-approaches.md`: summary of current methods and the project gap
-- `docs/project-plan.md`: architecture, task traceability, and verification plan
-- `docs/extension-roadmap.md`: future direction for multi-step cleaning and memory-aware control
-- `docs/status-report.md`: completed work, missing engineering tasks, and non-engineering leftovers
-- `docs/team-summary.md`: short shareable snapshot for collaborators
-- `docs/paper-claims-traceability.md`: every `main.pdf` Section 3/4 claim mapped to the file and test that implements it
-- `docs/paper-replication.md`: hardware, wall-clock, expected hard-Countdown band, and verification checklist for the full paper-faithful run
-- `docs/grounded-recovery-results-2026-04-26.md`: arithmetic-grounded recovery experiment write-up
-- `docs/diagrams/end-to-end-pipeline.html`: post-Phase-A architecture diagram
-- `skills/learning-to-reset-research/SKILL.md`: repo-local working guide for future development
-
-## Quick Start
-
-Run the tests:
+Run the unit suite:
 
 ```bash
-PYTHONPATH=src python3 -m unittest discover -s tests -v
+make test
 ```
 
-Run the baseline mechanics demo:
+Run the text demo:
 
 ```bash
-PYTHONPATH=src python3 -m learning_to_reset
+make demo
 ```
 
-Install the local training stack:
+Regenerate the README figures:
 
 ```bash
-python3 -m venv .venv
-./.venv/bin/pip install -e .[trainer]
+make figures
 ```
 
-The `trainer` extra installs `transformers`, `datasets`, `accelerate`, and `torch`. Skip it if you only want to run the unit tests, which work on the standard library alone.
-
-Prepare split JSONL artifacts from raw trace and Countdown files:
+Open the notebook demo:
 
 ```bash
-PYTHONPATH=src python3 -m learning_to_reset.prepare_artifacts \
-  --traces path/to/traces.jsonl \
-  --countdown path/to/countdown.jsonl \
-  --output-dir output/prepared
+jupyter notebook notebooks/demo.ipynb
 ```
 
-Fetch a paper-aligned source bundle and prepare real-source artifacts:
+The notebook reads local artifacts when present and falls back to the documented pilot metrics when they are absent.
+
+## Reproduce The Pipeline
+
+Smoke-check the paper pipeline locally without downloading models or spending GPU time:
 
 ```bash
-PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.paper_sources \
-  --output-dir tmp/paper-assets \
-  --max-train-samples 12 \
-  --max-eval-samples 4 \
-  --max-reference-trace-rows 64
+make replicate-pilot
+```
 
-PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.prepare_paper_artifacts \
+Run the paper-faithful path only after choosing GPU hardware:
+
+```bash
+make replicate-paper BASE_MODEL=Qwen/Qwen2.5-1.5B-Instruct OUT_DIR=runs/replicate-paper
+```
+
+That command launches the same orchestration path documented in [docs/paper-replication.md](docs/paper-replication.md). CPU/MPS is useful for tests and pilot artifacts, but it is not a faithful way to chase the 36.94% paper number.
+
+## What Is Implemented
+
+- `<clean>`-aware trace curation for SFT examples
+- one-shot reset evaluation and multi-clean retry evaluation
+- Countdown sample loading, prompt building, solving, and verification
+- failure-mined solver-verified recovery traces
+- SFT and reset-aware RLOO runtimes
+- provenance reporting for prepared SFT mixes
+- full-reset, selective-retention, and memory-aware extension controllers
+- figure and qualitative-export scripts for paper-style reporting
+- dry-run validation for the full paper replication shell pipeline
+
+## Key Commands
+
+Prepare paper-aligned artifacts:
+
+```bash
+PYTHONPATH=src python3 -m learning_to_reset.prepare_paper_artifacts \
   --traces tmp/paper-assets/reference-traces.jsonl \
   --countdown-train tmp/paper-assets/countdown-train.jsonl \
   --countdown-eval tmp/paper-assets/countdown-eval.jsonl \
@@ -113,141 +90,68 @@ PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.prepare_paper_artifacts \
   --require-recovery-target-correct
 ```
 
-This writes both `countdown-test.jsonl` and `countdown-test-hard.jsonl`; the hard slice keeps examples that require multiplication or division under the deterministic Countdown solver.
-
-Generate a Countdown-aligned fallback trace set directly from local Countdown prompts:
+Run reset-aware evaluation:
 
 ```bash
-PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.synthetic_countdown_dataset \
-  --reference-path tmp/paper-assets/countdown-train.jsonl \
-  --output-path tmp/paper-assets/countdown-train-hard.jsonl \
-  --num-samples 64 \
-  --require-hard
-
-PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.synthetic_countdown_traces \
-  --countdown tmp/paper-assets/countdown-train-hard.jsonl \
-  --output-path tmp/paper-assets/synthetic-countdown-traces.jsonl \
-  --solutions-per-sample 4 \
-  --recovery-style all
-```
-
-`--recovery-style all` now includes the `grounded` style alongside `walkthrough`, `verification`, and `contrastive`. Use `--recovery-style grounded` to emit only the arithmetic-grounded template with substep arithmetic, a rejected hypothesis, a number-budget audit, and a final-value reconciliation.
-
-Mine failed hard eval outputs into solver-verified recovery traces for the next training cycle:
-
-```bash
-PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.failure_recovery_traces \
-  --prepared-countdown output/prepared/countdown-test-hard.jsonl \
-  --eval-results output/eval/countdown-hard/results.jsonl \
-  --output-path output/traces/mined-hard-recoveries.jsonl \
-  --max-solutions-per-failure 3 \
-  --recovery-style all
-```
-
-Use mined traces as training data only with a fresh held-out comparison slice; do not report metrics on the same examples that were mined into recovery supervision.
-
-Run SFT on prepared artifacts:
-
-```bash
-PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.sft_runtime \
-  --train output/prepared/sft-train.jsonl \
-  --validation output/prepared/sft-validation.jsonl \
-  --model path/or/model-name \
-  --output-dir output/checkpoints/sft
-```
-
-Run Countdown generation and scoring:
-
-```bash
-PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.eval_runtime \
-  --prepared-countdown output/prepared/countdown-test.jsonl \
-  --model path/or/model-name \
-  --output-dir output/eval/countdown
-```
-
-Compare raw one-pass and reset-aware evaluation runs:
-
-```bash
-PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.compare_eval_results \
-  --baseline-dir output/eval/countdown-raw \
-  --candidate-dir output/eval/countdown-reset-aware \
-  --output-dir output/eval/comparison
-```
-
-Compare extension trajectories in code with `compare_extension_trajectories(...)`, then write JSON/Markdown artifacts with `write_extension_comparison_outputs(...)`. From the CLI, score the `full_reset`, `selective_retention`, and `memory` controllers on the segments that an existing multi-clean eval already produced:
-
-```bash
-PYTHONPATH=src ./.venv/bin/python scripts/run_extension_comparison.py \
-  --prepared-countdown output/prepared/countdown-test-hard.jsonl \
-  --results-jsonl output/eval/multi-clean-3/results.jsonl \
-  --output-dir output/eval/extensions \
-  --max-cleans 3
-```
-
-Run the verifier-aware multi-clean evaluator end-to-end (Figure 6 metrics):
-
-```bash
-PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.eval_runtime \
-  --prepared-countdown output/prepared/countdown-test-hard.jsonl \
-  --model output/checkpoints/sft \
-  --output-dir output/eval/multi-clean-3 \
+PYTHONPATH=src python3 -m learning_to_reset.eval_runtime \
+  --prepared-countdown tmp/paper-artifacts/countdown-test-hard.jsonl \
+  --model tmp/paper-runs/sft-grounded-26apr-seed219mine \
+  --output-dir tmp/paper-eval/local-hard-multiclean3 \
   --max-new-tokens 384 \
   --max-clean-tries 3
 ```
 
-If accuracy is stuck at zero but `average_score` or `score_when_cleaned` hovers around **0.1**, the model is usually emitting **legal** `<answer>` expressions that simply **miss the target** (scoring gives 0.1 partial credit for validity + 1.0 only when correct). At `0.5B`, do **not** treat more template-only retries as the default next move: the repo's April 2026 results show that grounded templates, multi-clean decoding, and `--verifier-feedback` improved validity more than correctness on hard holdouts. Use those only for diagnostics or reproducibility; the default next bets are stronger arithmetic data, step-level verifier reward, or a larger model.
-
-Export Figure 7-style best/worst qualitative samples from any eval directory:
+Mine failed eval outputs into verified recovery traces:
 
 ```bash
-PYTHONPATH=src ./.venv/bin/python scripts/export_qualitative_samples.py \
-  --eval-results output/eval/multi-clean-3/results.jsonl \
-  --output-path output/eval/multi-clean-3/qualitative.md
+PYTHONPATH=src python3 -m learning_to_reset.failure_recovery_traces \
+  --prepared-countdown tmp/paper-artifacts/countdown-test-hard.jsonl \
+  --eval-results tmp/paper-eval/local-hard-multiclean3/results.jsonl \
+  --output-path tmp/paper-assets/mined-recoveries.jsonl \
+  --recovery-style grounded
 ```
 
-Drive the full paper-faithful pipeline (requires a 1B+ GPU; see `docs/paper-replication.md`):
+Compare extension controllers on existing multi-clean segments:
 
 ```bash
-PYTHON=python3 PYTHONPATH=src bash scripts/replicate_paper.sh \
-  --base-model Qwen/Qwen2.5-1.5B-Instruct \
-  --out-dir runs/replicate-paper-2026-04-26
+PYTHONPATH=src python3 scripts/run_extension_comparison.py \
+  --prepared-countdown tmp/paper-artifacts/countdown-test-hard.jsonl \
+  --results-jsonl tmp/paper-eval/local-hard-multiclean3/results.jsonl \
+  --output-dir tmp/paper-eval/extensions \
+  --max-cleans 3
 ```
 
-Smoke-validate the same pipeline locally on Qwen 0.5B without any model run:
+## Documentation
 
-```bash
-PYTHON=python3 PYTHONPATH=src bash scripts/replicate_paper.sh --dry-run \
-  --base-model Qwen/Qwen2.5-0.5B \
-  --out-dir /tmp/replicate-paper-dryrun
-```
+- [docs/completion-plan.md](docs/completion-plan.md): current Phase 1-4 execution plan
+- [docs/paper-replication.md](docs/paper-replication.md): GPU runbook for the 1B+ replication
+- [docs/grounded-recovery-results-2026-04-26.md](docs/grounded-recovery-results-2026-04-26.md): negative result explaining the 0.5B arithmetic ceiling
+- [docs/paper-claims-traceability.md](docs/paper-claims-traceability.md): paper claim to implementation/test map
+- [docs/status-report.md](docs/status-report.md): detailed project status and prior experiment log
+- [docs/diagrams/end-to-end-pipeline.html](docs/diagrams/end-to-end-pipeline.html): full architecture diagram
 
-Run reset-aware RLOO on prepared Countdown prompts:
-
-```bash
-PYTHONPATH=src ./.venv/bin/python -m learning_to_reset.rloo_runtime \
-  --train output/prepared/countdown-train.jsonl \
-  --validation output/prepared/countdown-validation.jsonl \
-  --model output/checkpoints/sft \
-  --output-dir output/checkpoints/rloo \
-  --responses-per-prompt 4
-```
-
-Do not treat RLOO as the default next step if the current SFT checkpoint is still at fluke-level hard correctness. The repo now assumes a simple gate: only rerun RLOO once hard retry correctness is **strictly better than** the current `1/32`-style ceiling on the relevant hard slice. If the SFT checkpoint cannot clear that floor, improve SFT/data/reward first.
-
-## Repository Layout
+## Project Layout
 
 ```text
-docs/                      Paper summary, plan, and extension roadmap
-skills/                    Repo-local skill to keep future work aligned to the project direction
-src/learning_to_reset/     Core context-reset utilities
-tests/                     Regression tests for the current behavior
-.github/workflows/         GitHub CI
+src/learning_to_reset/
+  trace_curation.py              SFT trace normalization and clean supervision
+  context_manager.py             one-shot clean retry mechanics
+  countdown_verifier.py          expression legality and target checking
+  failure_recovery_traces.py     mined recovery trace generation
+  paper_dataset_prep.py          paper-aligned artifact export and provenance
+  eval_runtime.py                raw, reset-aware, and multi-clean evaluation
+  rloo_runtime.py                reset-aware RL runtime
+  extension_comparison_runner.py extension controller scoring
+
+scripts/
+  replicate_paper.sh             end-to-end paper pipeline
+  build_figures.py               README/docs SVG figure generator
+  run_extension_comparison.py    extension comparison CLI wrapper
+
+tests/
+  test_integration_pipeline.py   CPU-tiny full-loop regression test
 ```
 
-## Immediate Next Steps
+## Limitations
 
-1. Improve arithmetic supervision with stronger SFT mix quality and step-level verifier-aware reward so the model stops writing plausible but false “verified” equations.
-2. Add or fetch a stronger Countdown-native expert-trace source with verified target-correct recoveries.
-3. Scale from local CPU pilots to the larger target-model train/eval run once stronger traces are available.
-4. Run a broader raw-versus-reset-aware comparison on a larger hard Countdown slice.
-5. Use the extension comparison utility only after the baseline itself shows nontrivial hard correctness.
+The local run is not a paper-faithful reproduction of the 36.94% number. It is a validated pilot that proves the reset mechanism and documents the arithmetic failure mode. A real reproduction needs the Phase 3 GPU run, fresh run metadata, and updated results in the README before claiming the headline paper result.

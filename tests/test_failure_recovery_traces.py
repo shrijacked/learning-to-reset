@@ -1,3 +1,5 @@
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,6 +8,7 @@ from learning_to_reset.countdown_verifier import score_countdown_response
 from learning_to_reset.failure_recovery_traces import (
     build_failure_recovery_trace_records,
     generate_failure_recovery_trace_corpus,
+    main,
 )
 from learning_to_reset.prompts import PromptExample, build_reasoning_prompt
 
@@ -269,6 +272,46 @@ class FailureRecoveryTraceTests(unittest.TestCase):
         self.assertEqual(summary["records_written"], 1)
         self.assertEqual(summary["recovery_style"], "verification")
         self.assertEqual(len(lines), 1)
+
+    def test_main_warns_when_eval_results_do_not_match_prepared_split(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            prepared_path = root / "countdown-test-hard.jsonl"
+            results_path = root / "results.jsonl"
+            output_path = root / "mined-recoveries.jsonl"
+            prepared_path.write_text(
+                (
+                    '{"prompt":"Question: Use 1, 2 to reach 3.","response":"",'
+                    '"metadata":{"source_id":"prepared-only","numbers":[1,2],'
+                    '"target":3,"question":"Use 1, 2 to reach 3."}}\n'
+                ),
+                encoding="utf-8",
+            )
+            results_path.write_text(
+                (
+                    '{"source_id":"missing-result","response":"<think>Bad.</think><clean>",'
+                    '"is_valid":false,"reaches_target":false}\n'
+                ),
+                encoding="utf-8",
+            )
+
+            stderr = io.StringIO()
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "--prepared-countdown",
+                        str(prepared_path),
+                        "--eval-results",
+                        str(results_path),
+                        "--output-path",
+                        str(output_path),
+                    ]
+                )
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("WARNING: skipped 1 eval result", stderr.getvalue())
+        self.assertIn("no recovery traces written", stderr.getvalue())
 
 
 if __name__ == "__main__":

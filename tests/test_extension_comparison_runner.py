@@ -214,6 +214,50 @@ class RunOnFilesIntegrationTests(unittest.TestCase):
             self.assertTrue((output_dir / "extension-comparison.json").exists())
             self.assertTrue((output_dir / "extension-comparison.md").exists())
 
+    def test_run_extension_comparison_skips_incomplete_clean_segment_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            prepared = tmp_path / "countdown.jsonl"
+            results = tmp_path / "results.jsonl"
+            output_dir = tmp_path / "out"
+            _write_jsonl(
+                prepared,
+                [
+                    {
+                        "prompt": "Use 1, 2, 3, 4 to reach 24.",
+                        "response": "",
+                        "metadata": {
+                            "source_id": "ex-1",
+                            "numbers": [1, 2, 3, 4],
+                            "target": 24,
+                            "question": "Use 1, 2, 3, 4 to reach 24.",
+                        },
+                    }
+                ],
+            )
+            _write_jsonl(
+                results,
+                [
+                    {
+                        "source_id": "ex-1",
+                        "segments": [
+                            {"response": "<think>I need a retry.</think><clean>"}
+                        ],
+                    }
+                ],
+            )
+            summary = run_extension_comparison_on_files(
+                prepared_path=str(prepared),
+                results_path=str(results),
+                output_dir=str(output_dir),
+                max_cleans=2,
+            )
+            output_exists = (output_dir / "extension-comparison.json").exists()
+
+        self.assertEqual(summary["total_examples"], 0)
+        self.assertEqual(summary["skipped_incomplete_clean_segments"], 1)
+        self.assertTrue(output_exists)
+
 
 if __name__ == "__main__":
     unittest.main()

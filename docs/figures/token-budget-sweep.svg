@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="284" viewBox="0 0 860 284" role="img" aria-labelledby="title desc">
+  <title id="title">Token Budget Sweep: Correctness Stayed Flat</title>
+  <desc id="desc">Learning to Reset figure generated from local metrics.</desc>
+  <rect width="860" height="284" fill="#f8fafc"/>
+  <text x="32" y="40" fill="#0f172a" font-family="Arial, sans-serif" font-size="22" font-weight="700">Token Budget Sweep: Correctness Stayed Flat</text>
+  <text x="32" y="104" fill="#334155" font-family="Arial, sans-serif" font-size="15">128 tokens</text>
+  <rect x="230" y="82" width="560" height="28" fill="#e2e8f0"/>
+  <rect x="230" y="82" width="0.0" height="28" fill="#94a3b8"/>
+  <text x="804" y="102" fill="#0f172a" font-family="Arial, sans-serif" font-size="14">0.0%</text>
+  <text x="32" y="162" fill="#334155" font-family="Arial, sans-serif" font-size="15">384 tokens</text>
+  <rect x="230" y="140" width="560" height="28" fill="#e2e8f0"/>
+  <rect x="230" y="140" width="0.0" height="28" fill="#64748b"/>
+  <text x="804" y="160" fill="#0f172a" font-family="Arial, sans-serif" font-size="14">0.0%</text>
+  <text x="32" y="220" fill="#334155" font-family="Arial, sans-serif" font-size="15">multi-clean x3</text>
+  <rect x="230" y="198" width="560" height="28" fill="#e2e8f0"/>
+  <rect x="230" y="198" width="0.0" height="28" fill="#475569"/>
+  <text x="804" y="218" fill="#0f172a" font-family="Arial, sans-serif" font-size="14">0.0%</text>
+</svg>

@@ -503,6 +503,16 @@ class PaperDatasetPrepTests(unittest.TestCase):
             )
 
         self.assertTrue(manifest["exclude_bootstrap_negatives"])
+        self.assertEqual(
+            manifest["sft"]["provenance"]["after_filter"]["by_source"]["reference"],
+            1,
+        )
+        self.assertEqual(
+            manifest["sft"]["provenance"]["before_filter"]["by_bootstrap_kind"][
+                "think_only_negative"
+            ],
+            1,
+        )
         self.assertEqual(manifest["sft"]["train"], 1)
         self.assertEqual(len(sft_train_lines), 1)
         self.assertIn('"source_id": "positive"', sft_train_lines[0])

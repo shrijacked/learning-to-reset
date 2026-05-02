@@ -1,0 +1,61 @@
+{
+  "metrics": {
+    "raw_0_5b": {
+      "label": "raw 0.5B",
+      "total_examples": 32,
+      "valid": 0,
+      "correct": 0,
+      "valid_rate": 0.0,
+      "accuracy": 0.0,
+      "clean_rate": 0.0,
+      "score_when_cleaned": 0.0
+    },
+    "reset_0_5b": {
+      "label": "reset-aware 0.5B",
+      "total_examples": 32,
+      "valid": 29,
+      "correct": 1,
+      "valid_rate": 0.90625,
+      "accuracy": 0.03125,
+      "clean_rate": 1.0,
+      "score_when_cleaned": 0.13125000000000003
+    },
+    "grounded_fresh32": {
+      "label": "grounded fresh-32",
+      "total_examples": 32,
+      "valid": 31,
+      "correct": 0,
+      "valid_rate": 0.96875,
+      "accuracy": 0.0,
+      "clean_rate": 1.0,
+      "score_when_cleaned": 0.09687500000000004
+    },
+    "grounded_seed131": {
+      "label": "grounded seed=131",
+      "total_examples": 32,
+      "valid": 32,
+      "correct": 0,
+      "valid_rate": 1.0,
+      "accuracy": 0.0,
+      "clean_rate": 1.0,
+      "score_when_cleaned": 0.10000000000000005
+    },
+    "paper_1b": {
+      "label": "paper 1B",
+      "total_examples": 100,
+      "valid": null,
+      "correct": 36.94,
+      "valid_rate": null,
+      "accuracy": 0.3694,
+      "clean_rate": null,
+      "score_when_cleaned": null
+    }
+  },
+  "figures": [
+    "clean-rate-score.svg",
+    "hard-correctness-gap.svg",
+    "pipeline.svg",
+    "token-budget-sweep.svg",
+    "validity-raw-vs-reset.svg"
+  ]
+}

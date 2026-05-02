@@ -78,6 +78,7 @@ def curate_trace(
     base_instructions: str,
     clean_instructions: str,
     clean_signal_text: str = DEFAULT_CLEAN_SIGNAL,
+    allow_missing_answer_for_incorrect: bool = False,
 ) -> CuratedTrace:
     """Curate an SFT example for context-reset training."""
 
@@ -93,6 +94,17 @@ def curate_trace(
             response=response,
             uses_clean=False,
             normalized_trace=normalized,
+        )
+
+    raw_requests_clean = "<clean>" in raw_trace.lower()
+    if (
+        normalized.answer_text is None
+        and not raw_requests_clean
+        and not allow_missing_answer_for_incorrect
+    ):
+        raise ValueError(
+            "Incorrect traces must include a final <answer> block unless they are "
+            "explicitly marked as clean-only negatives or already request <clean>."
         )
 
     think_text = normalized.think_text

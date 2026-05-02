@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="994" height="240" viewBox="0 0 994 240" role="img" aria-labelledby="title desc">
+  <title id="title">Reset-Aware Replication Pipeline</title>
+  <desc id="desc">Learning to Reset figure generated from local metrics.</desc>
+  <rect width="994" height="240" fill="#f8fafc"/>
+  <text x="32" y="40" fill="#0f172a" font-family="Arial, sans-serif" font-size="22" font-weight="700">Reset-Aware Replication Pipeline</text>
+
+  <g font-family="Arial, sans-serif" font-size="14">
+    <rect x="42" y="90" width="150" height="54" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text x="117" y="122" text-anchor="middle" fill="#172554">source data</text>
+    <rect x="232" y="90" width="150" height="54" fill="#ccfbf1" stroke="#0f766e"/>
+    <text x="307" y="122" text-anchor="middle" fill="#134e4a">SFT traces</text>
+    <rect x="422" y="90" width="150" height="54" fill="#fef3c7" stroke="#b45309"/>
+    <text x="497" y="122" text-anchor="middle" fill="#78350f">eval + mine</text>
+    <rect x="612" y="90" width="150" height="54" fill="#ede9fe" stroke="#7c3aed"/>
+    <text x="687" y="122" text-anchor="middle" fill="#3b0764">re-SFT/RLOO</text>
+    <rect x="802" y="90" width="150" height="54" fill="#fee2e2" stroke="#b91c1c"/>
+    <text x="877" y="122" text-anchor="middle" fill="#7f1d1d">report</text>
+    <path d="M192 117 H232 M382 117 H422 M572 117 H612 M762 117 H802" stroke="#475569" stroke-width="2"/>
+    <text x="42" y="200" fill="#334155">Local path: proves validity recovery at 0.5B. Paper path: repeats the same pipeline at 1B+ on GPU.</text>
+  </g>
+
+</svg>

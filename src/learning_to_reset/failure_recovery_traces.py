@@ -439,6 +439,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    import sys
+
     args = build_parser().parse_args(argv)
     summary = generate_failure_recovery_trace_corpus(
         prepared_countdown_path=args.prepared_countdown,
@@ -448,6 +450,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         recovery_style=args.recovery_style,
         exclude_source_id_paths=args.exclude_source_ids,
     )
+    skipped = int(summary.get("skipped_missing_example", 0))
+    written = int(summary.get("records_written", 0))
+    if skipped > 0:
+        print(
+            f"WARNING: skipped {skipped} eval result(s) with no matching prepared example; "
+            f"this usually means --eval-results was produced against a different split "
+            f"than --prepared-countdown.",
+            file=sys.stderr,
+        )
+        if written == 0:
+            print(
+                "ERROR: no recovery traces written. Check that --prepared-countdown points "
+                "at the same split that produced --eval-results.",
+                file=sys.stderr,
+            )
     print(json.dumps(summary, indent=2, ensure_ascii=True))
     return 0
 

@@ -69,6 +69,32 @@ class TraceCurationTests(unittest.TestCase):
         self.assertTrue(curated.response.strip().endswith("<clean>"))
         self.assertNotIn("<answer>", curated.response)
 
+    def test_incorrect_trace_without_answer_requires_explicit_opt_in(self) -> None:
+        raw_trace = "<think>This path never produced an answer.</think>"
+
+        with self.assertRaises(ValueError):
+            curate_trace(
+                raw_trace=raw_trace,
+                is_correct=False,
+                base_instructions=BASE_INSTRUCTIONS,
+                clean_instructions=CLEAN_INSTRUCTIONS,
+            )
+
+    def test_incorrect_trace_without_answer_can_be_explicit_clean_only_negative(self) -> None:
+        raw_trace = "<think>This path is intentionally unproductive.</think>"
+
+        curated = curate_trace(
+            raw_trace=raw_trace,
+            is_correct=False,
+            base_instructions=BASE_INSTRUCTIONS,
+            clean_instructions=CLEAN_INSTRUCTIONS,
+            allow_missing_answer_for_incorrect=True,
+        )
+
+        self.assertTrue(curated.uses_clean)
+        self.assertTrue(curated.response.strip().endswith("<clean>"))
+        self.assertNotIn("<answer>", curated.response)
+
     def test_correct_trace_requires_a_final_answer(self) -> None:
         raw_trace = "<think>Reasoning only.</think>"
 

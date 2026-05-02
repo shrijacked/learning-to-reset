@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="342" viewBox="0 0 860 342" role="img" aria-labelledby="title desc">
+  <title id="title">Hard Countdown Correctness Gap</title>
+  <desc id="desc">Learning to Reset figure generated from local metrics.</desc>
+  <rect width="860" height="342" fill="#f8fafc"/>
+  <text x="32" y="40" fill="#0f172a" font-family="Arial, sans-serif" font-size="22" font-weight="700">Hard Countdown Correctness Gap</text>
+  <text x="32" y="104" fill="#334155" font-family="Arial, sans-serif" font-size="15">raw 0.5B</text>
+  <rect x="230" y="82" width="560" height="28" fill="#e2e8f0"/>
+  <rect x="230" y="82" width="0.0" height="28" fill="#64748b"/>
+  <text x="804" y="102" fill="#0f172a" font-family="Arial, sans-serif" font-size="14">0.0%</text>
+  <text x="32" y="162" fill="#334155" font-family="Arial, sans-serif" font-size="15">reset-aware 0.5B</text>
+  <rect x="230" y="140" width="560" height="28" fill="#e2e8f0"/>
+  <rect x="230" y="140" width="43.8" height="28" fill="#0f766e"/>
+  <text x="804" y="160" fill="#0f172a" font-family="Arial, sans-serif" font-size="14">3.1%</text>
+  <text x="32" y="220" fill="#334155" font-family="Arial, sans-serif" font-size="15">grounded local runs</text>
+  <rect x="230" y="198" width="560" height="28" fill="#e2e8f0"/>
+  <rect x="230" y="198" width="0.0" height="28" fill="#2563eb"/>
+  <text x="804" y="218" fill="#0f172a" font-family="Arial, sans-serif" font-size="14">0.0%</text>
+  <text x="32" y="278" fill="#334155" font-family="Arial, sans-serif" font-size="15">paper 1B target</text>
+  <rect x="230" y="256" width="560" height="28" fill="#e2e8f0"/>
+  <rect x="230" y="256" width="517.2" height="28" fill="#b45309"/>
+  <text x="804" y="276" fill="#0f172a" font-family="Arial, sans-serif" font-size="14">36.9%</text>
+</svg>

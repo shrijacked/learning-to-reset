@@ -158,6 +158,7 @@ def export_paper_prepared_datasets(
         "sft": {
             "train": len(sft_train),
             "validation": len(sft_validation),
+            "provenance": sft_mix_summary,
         },
         "countdown": {
             "train": len(countdown_train),
