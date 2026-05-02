@@ -99,7 +99,7 @@ def _read_json(path: Path) -> Dict[str, Any] | None:
 
 
 def _summarize_results(path: Path) -> Dict[str, Any] | None:
-    if not path.exists():
+    if not path.exists() or not path.is_file():
         return None
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     total = len(rows)
@@ -123,7 +123,9 @@ def load_metrics() -> Dict[str, Dict[str, Any]]:
     for key, summary_path in SUMMARY_PATHS.items():
         summary = _read_json(summary_path)
         if summary is None:
-            summary = _summarize_results(RESULTS_PATHS.get(key, Path()))
+            results_path = RESULTS_PATHS.get(key)
+            if results_path is not None:
+                summary = _summarize_results(results_path)
         if summary is None:
             continue
         metrics[key].update(
