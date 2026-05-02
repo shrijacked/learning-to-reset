@@ -145,6 +145,13 @@ Observed pilot outcome:
 - **Phase B decision gate (B4):** the plan’s pass condition was reset-aware target correctness **strictly greater than** `1/32` on at least one of {fresh-32, `seed = 131`} after B1 or B2; both holdouts remained **`0/32` correct** after B2, so the gate **did not pass**. Validity improved versus the pre-retrain multi-clean grounded checkpoint (`30/32` and `28/32` valid respectively on the same metric), but arithmetic target correctness did not move — document as a **negative finding** for this lever set at 0.5B, not as a silent retry loop
 - **Verifier-feedback ablation (post-B4):** the same checkpoint (`tmp/paper-runs/sft-grounded-26apr-seed219mine`) was re-evaluated with `--max-clean-tries 3 --verifier-feedback` (decode-time hints after each `<clean>`). Fresh-32 stayed **`0/32` correct**, `31/32` valid, `score_when_cleaned ≈ 0.097` (`tmp/paper-eval/sft-seed219mine-fresh32-feedback3/`). `seed = 131` stayed **`0/32` correct** with **`30/32` valid** (down from `32/32` without the flag), `score_when_cleaned ≈ 0.094` (`tmp/paper-eval/sft-seed219mine-seed131-feedback3/`). So explicit verifier text in the retry prompt **did not** unlock target correctness at 0.5B on these slices; the next levers remain larger models (`scripts/replicate_paper.sh`), RLOO with verifier-shaped reward, or solver-in-the-loop product modes outside strict LM accuracy
 
+- a fresh local pilot artifact prep rerun was created at `tmp/rerun-local-0p5b-20260503-013219/` using the updated paper-style prep path on the fetched pilot source bundle
+- the rerun produced explicit disjoint hard splits with `92` train-hard examples, `23` mine-hard examples, and `117` untouched hard-holdout examples, plus true raw-baseline prompt files including `countdown-test-hard-raw.jsonl`
+- the first prep pass confirmed that the pilot preset alone still kept bootstrap-generated clean-only negatives in the SFT mix; the artifact prep was then regenerated with `--exclude-bootstrap-negatives` so the rerun actually tests the Step 3 setup change
+- `sft-mix-summary.json` on the final artifact set shows `128` prepared SFT examples before filtering and `64` after filtering, with `think_only_negative` bootstrap examples removed entirely from the final mix
+- the final Phase 1 artifact set contains `57` SFT train examples and `7` SFT validation examples, establishing the exact starting corpus for the new local rerun
+
+
 Interpretation:
 
 - the source wiring and runtime pipeline now work on real fetched assets plus local Countdown-aligned trace expansion
