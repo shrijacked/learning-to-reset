@@ -150,6 +150,14 @@ Observed pilot outcome:
 - the first prep pass confirmed that the pilot preset alone still kept bootstrap-generated clean-only negatives in the SFT mix; the artifact prep was then regenerated with `--exclude-bootstrap-negatives` so the rerun actually tests the Step 3 setup change
 - `sft-mix-summary.json` on the final artifact set shows `128` prepared SFT examples before filtering and `64` after filtering, with `think_only_negative` bootstrap examples removed entirely from the final mix
 - the final Phase 1 artifact set contains `57` SFT train examples and `7` SFT validation examples, establishing the exact starting corpus for the new local rerun
+- SFT pass 1 on the fresh filtered rerun artifact set (`57` train / `7` validation examples after bootstrap-negative exclusion) completed to `tmp/rerun-local-0p5b-20260503-013219/sft` with `train_loss ≈ 1.2125` and `eval_loss ≈ 0.9666`
+- the true raw arithmetic baseline on the disjoint `countdown-mine-hard-raw.jsonl` slice (`23` examples) stayed completely flat after that SFT pass: `0/23` valid, `0/23` correct, `accuracy = 0.0`, `clean_rate = 0.0`, and `score_when_cleaned = 0.0`
+- qualitative spot-checks of the raw outputs show the model still emits long untargeted prose without a valid `<answer>` block, so the updated setup has not yet improved arithmetic-only hard Countdown behavior before retry-aware recovery
+- failure mining on the disjoint `countdown-mine-hard.jsonl` slice succeeded cleanly after the first-pass raw baseline: all `23` mined-slice failures were converted into `23` grounded solver-verified recovery traces, with `0` skipped solved/valid cases, `0` missing-example skips, `0` unsolved skips, and no contamination-guard overlap against the held-out test slices
+- the rerun then merged those `23` mined trace records back into the original `128` reference-trace corpus to form a `151`-record combined trace source, and re-ran `prepare_paper_artifacts --exclude-bootstrap-negatives` on that combined trace file rather than concatenating raw trace records directly into prepared SFT examples
+- on the regenerated mined artifact set, `sft-mix-summary.json` reports `151` prepared examples before filtering and `87` after filtering, with the final filtered mix consisting of `64` original non-bootstrap base traces plus `23` failure-mined grounded recovery traces
+- the second-pass SFT run on that regenerated prepared set completed to `tmp/rerun-local-0p5b-20260503-013219/sft-mined` with `78` train examples, `9` validation examples, `train_loss ≈ 0.9775`, and `eval_loss ≈ 0.000619`
+
 
 
 Interpretation:
