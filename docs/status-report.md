@@ -157,6 +157,10 @@ Observed pilot outcome:
 - the rerun then merged those `23` mined trace records back into the original `128` reference-trace corpus to form a `151`-record combined trace source, and re-ran `prepare_paper_artifacts --exclude-bootstrap-negatives` on that combined trace file rather than concatenating raw trace records directly into prepared SFT examples
 - on the regenerated mined artifact set, `sft-mix-summary.json` reports `151` prepared examples before filtering and `87` after filtering, with the final filtered mix consisting of `64` original non-bootstrap base traces plus `23` failure-mined grounded recovery traces
 - the second-pass SFT run on that regenerated prepared set completed to `tmp/rerun-local-0p5b-20260503-013219/sft-mined` with `78` train examples, `9` validation examples, `train_loss ≈ 0.9775`, and `eval_loss ≈ 0.000619`
+- reset-aware hard-holdout evaluation of the second-pass rerun checkpoint (`tmp/rerun-local-0p5b-20260503-013219/sft-mined`) on the untouched `117`-example `countdown-test-hard.jsonl` slice regressed completely: `0/117` valid, `0/117` correct, `accuracy = 0.0`, `clean_rate = 1.0`, and `score_when_cleaned = 0.0` at `max_new_tokens = 384` and `max_clean_tries = 3`
+- per-example outputs show the model is still emitting `<clean>` on the first segment, but the retry segment now frequently degenerates into malformed self-referential text such as repeating “No <answer> block found in response” inside the generated answer body instead of producing a legal Countdown expression
+- this rerun therefore does **not** beat the prior local `1/32` hard-correctness ceiling; it falls below even the earlier “mostly valid but wrong” behavior and should be recorded as a negative pre-RLOO result for this filtered + mined local setup
+- the explicit gate decision is **RLOO blocked**: the checkpoint scored `0/117` on the untouched hard holdout, which is below the minimum `2` correct examples required to justify reset-aware RL
 
 
 
