@@ -622,11 +622,7 @@ def train_rloo(
     last_loss = 0.0
 
     for step_index in range(1, steps + 1):
-        print(
-            f"[rloo_runtime] step {step_index}/{steps} (rollouts + backward; "
-            f"first step can take several minutes)",
-            flush=True,
-        )
+        print(f"[rloo_runtime] step {step_index}/{steps}", flush=True)
         batch_examples = []
         for _ in range(prompts_per_step):
             batch_examples.append(train_examples[cursor % len(train_examples)])
