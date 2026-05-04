@@ -40,6 +40,15 @@
 #   2 a pipeline step failed
 set -euo pipefail
 
+# Resolve repo root so this script works no matter the caller's cwd, and so
+# scripts/*.py paths and `python -m learning_to_reset` imports are deterministic.
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT" || {
+    echo "ERROR: cannot cd to repo root ${REPO_ROOT}" >&2
+    exit 1
+}
+export PYTHONPATH="${REPO_ROOT}/src${PYTHONPATH:+:${PYTHONPATH}}"
+
 export PYTHONUNBUFFERED="${PYTHONUNBUFFERED:-1}"
 
 PYTHON="${PYTHON:-python3}"
@@ -119,20 +128,12 @@ EXTENSIONS_DIR="$OUT_DIR/extensions"
 QUALITATIVE_PATH="$OUT_DIR/qualitative.md"
 MINED_TRACES_PATH="$OUT_DIR/mined-recovery-traces.jsonl"
 
-# Use a string (not an empty bash array) so `set -u` on macOS /bin/bash does not
-# treat "${ARRAY[@]}" as an unbound when the array is empty.
-VERIFIER_FEEDBACK_FLAG=""
-if [[ "${LTR_VERIFIER_FEEDBACK:-0}" == "1" ]]; then
-    VERIFIER_FEEDBACK_FLAG="--verifier-feedback"
-fi
+# Optional step-8 flag (avoid empty-array + set -u pitfalls).
+LTR_VERIFIER_FEEDBACK="${LTR_VERIFIER_FEEDBACK:-0}"
 
-# Step 4: default 500 prompts for raw eval. Set LTR_EVAL_RAW_MAX_EXAMPLES= to disable the cap.
+# Step 4: default 500 prompts for raw eval. Export LTR_EVAL_RAW_MAX_EXAMPLES= (empty) for no cap.
 if [[ "${LTR_EVAL_RAW_MAX_EXAMPLES-unset}" == "unset" ]]; then
     LTR_EVAL_RAW_MAX_EXAMPLES=500
-fi
-EVAL_RAW_MAX_ARGS=()
-if [[ -n "${LTR_EVAL_RAW_MAX_EXAMPLES}" ]]; then
-    EVAL_RAW_MAX_ARGS=(--max-examples "${LTR_EVAL_RAW_MAX_EXAMPLES}")
 fi
 
 log() {
@@ -198,13 +199,18 @@ run_cmd "$PYTHON" -m learning_to_reset.sft_runtime \
 # step 5's --exclude-source-ids and mining aborts.
 ###############################################################################
 check_cli "eval_runtime" "$PYTHON" -m learning_to_reset.eval_runtime
-run_cmd "$PYTHON" -m learning_to_reset.eval_runtime \
-    --prepared-countdown "$ARTIFACTS_DIR/countdown-train.jsonl" \
-    --model "$SFT_DIR" \
-    --output-dir "$EVAL_RAW_DIR" \
-    --max-new-tokens 384 \
-    --raw-generation \
-    "${EVAL_RAW_MAX_ARGS[@]}"
+STEP4_RAW=(
+    -m learning_to_reset.eval_runtime
+    --prepared-countdown "$ARTIFACTS_DIR/countdown-train.jsonl"
+    --model "$SFT_DIR"
+    --output-dir "$EVAL_RAW_DIR"
+    --max-new-tokens 384
+    --raw-generation
+)
+if [[ -n "${LTR_EVAL_RAW_MAX_EXAMPLES}" ]]; then
+    STEP4_RAW+=(--max-examples "${LTR_EVAL_RAW_MAX_EXAMPLES}")
+fi
+run_cmd "$PYTHON" "${STEP4_RAW[@]}"
 
 ###############################################################################
 # Step 5: Mine failures into recovery traces, contamination-guarded.
@@ -249,18 +255,23 @@ run_cmd "$PYTHON" -m learning_to_reset.rloo_runtime \
 ###############################################################################
 # Step 8: Final reset-aware eval with multi-clean decoding.
 ###############################################################################
-run_cmd "$PYTHON" -m learning_to_reset.eval_runtime \
-    --prepared-countdown "$ARTIFACTS_DIR/countdown-test-hard.jsonl" \
-    --model "$RLOO_DIR" \
-    --output-dir "$EVAL_FINAL_DIR" \
-    --max-new-tokens 384 \
-    --max-clean-tries "$MAX_CLEAN_TRIES" \
-    $VERIFIER_FEEDBACK_FLAG
+STEP8_EVAL=(
+    -m learning_to_reset.eval_runtime
+    --prepared-countdown "$ARTIFACTS_DIR/countdown-test-hard.jsonl"
+    --model "$RLOO_DIR"
+    --output-dir "$EVAL_FINAL_DIR"
+    --max-new-tokens 384
+    --max-clean-tries "$MAX_CLEAN_TRIES"
+)
+if [[ "$LTR_VERIFIER_FEEDBACK" == "1" ]]; then
+    STEP8_EVAL+=(--verifier-feedback)
+fi
+run_cmd "$PYTHON" "${STEP8_EVAL[@]}"
 
 ###############################################################################
 # Step 9: Extension comparison (full-reset / retention / memory).
 ###############################################################################
-EXTENSION_SCRIPT="scripts/run_extension_comparison.py"
+EXTENSION_SCRIPT="$REPO_ROOT/scripts/run_extension_comparison.py"
 if [[ -f "$EXTENSION_SCRIPT" ]]; then
     check_cli "run_extension_comparison" "$PYTHON" "$EXTENSION_SCRIPT"
     run_cmd "$PYTHON" "$EXTENSION_SCRIPT" \
@@ -269,20 +280,20 @@ if [[ -f "$EXTENSION_SCRIPT" ]]; then
         --output-dir "$EXTENSIONS_DIR" \
         --max-cleans "$MAX_CLEAN_TRIES"
 else
-    log "skip step 9: $EXTENSION_SCRIPT not yet present (added in B3)."
+    log "skip step 9: ${EXTENSION_SCRIPT} not present."
 fi
 
 ###############################################################################
 # Step 10: Qualitative sample export (Figure 7).
 ###############################################################################
-QUAL_SCRIPT="scripts/export_qualitative_samples.py"
+QUAL_SCRIPT="$REPO_ROOT/scripts/export_qualitative_samples.py"
 if [[ -f "$QUAL_SCRIPT" ]]; then
     check_cli "export_qualitative_samples" "$PYTHON" "$QUAL_SCRIPT"
     run_cmd "$PYTHON" "$QUAL_SCRIPT" \
         --eval-results "$EVAL_FINAL_DIR/results.jsonl" \
         --output-path "$QUALITATIVE_PATH"
 else
-    log "skip step 10: $QUAL_SCRIPT not present."
+    log "skip step 10: ${QUAL_SCRIPT} not present."
 fi
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
