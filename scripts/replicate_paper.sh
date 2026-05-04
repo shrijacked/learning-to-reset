@@ -174,7 +174,7 @@ run_cmd "$PYTHON" -m learning_to_reset.paper_sources \
 check_cli "prepare_paper_artifacts" "$PYTHON" -m learning_to_reset.prepare_paper_artifacts
 run_cmd "$PYTHON" -m learning_to_reset.prepare_paper_artifacts \
     --scale "$SCALE" \
-    --traces "$SOURCES_DIR/traces.jsonl" \
+    --traces "$SOURCES_DIR/reference-traces.jsonl" \
     --countdown-train "$SOURCES_DIR/countdown-train.jsonl" \
     --countdown-eval "$SOURCES_DIR/countdown-eval.jsonl" \
     --output-dir "$ARTIFACTS_DIR"
