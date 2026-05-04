@@ -56,6 +56,22 @@ class SFTRuntimeTests(unittest.TestCase):
         self.assertEqual(len(examples), 1)
         self.assertEqual(examples[0].metadata["source_id"], "x1")
 
+    def test_load_prepared_examples_max_examples_truncates(self) -> None:
+        rows = [
+            {"prompt": f"p{i}", "response": f"r{i}", "metadata": {"i": i}}
+            for i in range(5)
+        ]
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "prepared.jsonl"
+            path.write_text(
+                "\n".join(json.dumps(row) for row in rows) + "\n",
+                encoding="utf-8",
+            )
+            capped = load_prepared_examples(path, max_examples=2)
+        self.assertEqual(len(capped), 2)
+        self.assertEqual(capped[0].metadata["i"], 0)
+        self.assertEqual(capped[1].metadata["i"], 1)
+
     def test_render_training_text_combines_prompt_and_response(self) -> None:
         example = PromptExample(prompt="Question: solve", response="<answer>42</answer>")
 

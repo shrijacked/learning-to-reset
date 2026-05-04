@@ -21,6 +21,9 @@
 #   LTR_SFT_MAX_TRAIN_EXAMPLES — cap rows for step 3 SFT only (e.g. 10000 for a faster run).
 #                               Does not apply to step 6: combined.jsonl is sft-train then mined;
 #                               capping there would drop mined traces. Unset = full sft-train.jsonl.
+#   LTR_RLOO_MAX_TRAIN_EXAMPLES / LTR_RLOO_MAX_VALIDATION_EXAMPLES — cap JSONL rows loaded in
+#                               step 7 (RLOO does not use the full train file per step, but loading
+#                               it still parses every line unless capped).
 #   LTR_VERIFIER_FEEDBACK=1  — append decode-time verifier hints on step 8 retries
 #                              (passes --verifier-feedback to eval_runtime; not in
 #                              the original paper baseline, see README).
@@ -262,15 +265,24 @@ run_cmd "$PYTHON" -m learning_to_reset.sft_runtime \
 # Step 7: Reset-aware RLOO.
 ###############################################################################
 check_cli "rloo_runtime" "$PYTHON" -m learning_to_reset.rloo_runtime
-run_cmd "$PYTHON" -m learning_to_reset.rloo_runtime \
-    --train "$ARTIFACTS_DIR/countdown-train.jsonl" \
-    --validation "$ARTIFACTS_DIR/countdown-validation.jsonl" \
-    --model "$SFT2_DIR" \
-    --output-dir "$RLOO_DIR" \
-    --steps "$RLOO_STEPS" \
-    --responses-per-prompt 4 \
-    --max-new-tokens 384 \
+STEP7_RLOO=(
+    -m learning_to_reset.rloo_runtime
+    --train "$ARTIFACTS_DIR/countdown-train.jsonl"
+    --validation "$ARTIFACTS_DIR/countdown-validation.jsonl"
+    --model "$SFT2_DIR"
+    --output-dir "$RLOO_DIR"
+    --steps "$RLOO_STEPS"
+    --responses-per-prompt 4
+    --max-new-tokens 384
     --temperature 1.0
+)
+if [[ -n "${LTR_RLOO_MAX_TRAIN_EXAMPLES:-}" ]]; then
+    STEP7_RLOO+=(--max-train-examples "${LTR_RLOO_MAX_TRAIN_EXAMPLES}")
+fi
+if [[ -n "${LTR_RLOO_MAX_VALIDATION_EXAMPLES:-}" ]]; then
+    STEP7_RLOO+=(--max-validation-examples "${LTR_RLOO_MAX_VALIDATION_EXAMPLES}")
+fi
+run_cmd "$PYTHON" "${STEP7_RLOO[@]}"
 
 ###############################################################################
 # Step 8: Final reset-aware eval with multi-clean decoding.

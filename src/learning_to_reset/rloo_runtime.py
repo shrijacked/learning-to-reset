@@ -543,6 +543,8 @@ def train_rloo(
     seed: int = 0,
     eval_every_steps: int = 0,
     device: str = "auto",
+    max_train_examples: int | None = None,
+    max_validation_examples: int | None = None,
 ) -> Dict[str, Any]:
     """Train a one-shot reset-aware policy with modified RLOO."""
 
@@ -564,6 +566,11 @@ def train_rloo(
         model.resize_token_embeddings(len(tokenizer))
     model.to(selected_device)
     model.train()
+    print(
+        f"[rloo_runtime] model ready on {selected_device} ({resolved_model_path}); "
+        "loading datasets next",
+        flush=True,
+    )
 
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -571,10 +578,37 @@ def train_rloo(
         weight_decay=weight_decay,
     )
 
-    train_examples = load_prepared_examples(train_path)
-    validation_examples = load_prepared_examples(validation_path) if validation_path else ()
+    train_path = Path(train_path)
+    cap_msg = (
+        f", first {max_train_examples} rows only" if max_train_examples is not None else ""
+    )
+    print(
+        f"[rloo_runtime] loading training examples from {train_path}{cap_msg}",
+        flush=True,
+    )
+    if max_train_examples is not None and max_train_examples < 1:
+        raise ValueError("max_train_examples must be >= 1 when provided")
+    train_examples = load_prepared_examples(train_path, max_train_examples)
+    if validation_path:
+        val_path = Path(validation_path)
+        vcap = (
+            f", first {max_validation_examples} rows only"
+            if max_validation_examples is not None
+            else ""
+        )
+        print(f"[rloo_runtime] loading validation examples from {val_path}{vcap}", flush=True)
+        if max_validation_examples is not None and max_validation_examples < 1:
+            raise ValueError("max_validation_examples must be >= 1 when provided")
+        validation_examples = load_prepared_examples(val_path, max_validation_examples)
+    else:
+        validation_examples = ()
     if not train_examples:
         raise ValueError("The training split is empty.")
+    print(
+        f"[rloo_runtime] loaded {len(train_examples)} train, "
+        f"{len(validation_examples)} validation examples; starting {steps} step(s) on {selected_device}",
+        flush=True,
+    )
 
     output_root = Path(output_dir)
     output_root.mkdir(parents=True, exist_ok=True)
@@ -588,6 +622,11 @@ def train_rloo(
     last_loss = 0.0
 
     for step_index in range(1, steps + 1):
+        print(
+            f"[rloo_runtime] step {step_index}/{steps} (rollouts + backward; "
+            f"first step can take several minutes)",
+            flush=True,
+        )
         batch_examples = []
         for _ in range(prompts_per_step):
             batch_examples.append(train_examples[cursor % len(train_examples)])
@@ -778,6 +817,23 @@ def build_parser() -> argparse.ArgumentParser:
         default="auto",
         help="Execution device.",
     )
+    parser.add_argument(
+        "--max-train-examples",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Only load the first N rows of --train (faster startup; each step still "
+            "uses prompts_per_step examples, cycling this pool)."
+        ),
+    )
+    parser.add_argument(
+        "--max-validation-examples",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Only load the first N rows of --validation when present.",
+    )
     return parser
 
 
@@ -801,6 +857,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         seed=args.seed,
         eval_every_steps=args.eval_every_steps,
         device=args.device,
+        max_train_examples=args.max_train_examples,
+        max_validation_examples=args.max_validation_examples,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=True))
     return 0

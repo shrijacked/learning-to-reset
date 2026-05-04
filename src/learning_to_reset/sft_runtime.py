@@ -13,22 +13,35 @@ from learning_to_reset.model_resolver import resolve_model_name_or_path
 from learning_to_reset.prompts import PromptExample
 
 
-def load_prepared_examples(path: str | Path) -> tuple[PromptExample, ...]:
-    """Load prompt/response examples from a prepared JSONL file."""
+def load_prepared_examples(
+    path: str | Path,
+    max_examples: int | None = None,
+) -> tuple[PromptExample, ...]:
+    """Load prompt/response examples from a prepared JSONL file (streaming).
+
+    When ``max_examples`` is set, stop after that many non-blank rows so large
+    files are not fully read or parsed.
+    """
+
+    if max_examples is not None and max_examples < 1:
+        raise ValueError("max_examples must be >= 1 when provided")
 
     source = Path(path)
-    examples = []
-    for line in source.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        payload = json.loads(line)
-        examples.append(
-            PromptExample(
-                prompt=payload["prompt"],
-                response=payload.get("response", ""),
-                metadata=payload.get("metadata", {}),
+    examples: list[PromptExample] = []
+    with source.open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            examples.append(
+                PromptExample(
+                    prompt=payload["prompt"],
+                    response=payload.get("response", ""),
+                    metadata=payload.get("metadata", {}),
+                )
             )
-        )
+            if max_examples is not None and len(examples) >= max_examples:
+                break
     return tuple(examples)
 
 
@@ -155,11 +168,10 @@ def train_sft(
         else:
             tokenizer.add_special_tokens({"pad_token": "<pad>"})
 
-    train_examples = load_prepared_examples(train_path)
+    if max_train_examples is not None and max_train_examples < 1:
+        raise ValueError("max_train_examples must be >= 1")
+    train_examples = load_prepared_examples(train_path, max_train_examples)
     if max_train_examples is not None:
-        if max_train_examples < 1:
-            raise ValueError("max_train_examples must be >= 1")
-        train_examples = train_examples[:max_train_examples]
         print(
             f"[sft_runtime] using first {len(train_examples)} train rows (--max-train-examples)",
             flush=True,
