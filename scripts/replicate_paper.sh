@@ -5,7 +5,9 @@
 #   1. Fetch paper-aligned source datasets       (paper_sources --scale paper)
 #   2. Prepare SFT + Countdown artifacts         (prepare_paper_artifacts --scale paper)
 #   3. SFT on grounded recovery traces           (sft_runtime)
-#   4. Baseline raw eval to mine failures        (eval_runtime --raw-generation)
+#   4. Baseline raw eval to mine failures        (eval_runtime --raw-generation;
+#                                                 use countdown-train, not test-hard,
+#                                                 so step 5 mining passes contamination check)
 #   5. Mine recovery traces from failures        (failure_recovery_traces --exclude-source-ids)
 #   6. Re-SFT on combined corpus                 (sft_runtime)
 #   7. Reset-aware RLOO                          (rloo_runtime)
@@ -192,10 +194,12 @@ run_cmd "$PYTHON" -m learning_to_reset.sft_runtime \
 
 ###############################################################################
 # Step 4: Baseline raw eval (used to mine failures).
+# Must match train-side prompts — eval on test-hard makes every source_id overlap
+# step 5's --exclude-source-ids and mining aborts.
 ###############################################################################
 check_cli "eval_runtime" "$PYTHON" -m learning_to_reset.eval_runtime
 run_cmd "$PYTHON" -m learning_to_reset.eval_runtime \
-    --prepared-countdown "$ARTIFACTS_DIR/countdown-test-hard.jsonl" \
+    --prepared-countdown "$ARTIFACTS_DIR/countdown-train.jsonl" \
     --model "$SFT_DIR" \
     --output-dir "$EVAL_RAW_DIR" \
     --max-new-tokens 384 \
