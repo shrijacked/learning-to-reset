@@ -122,5 +122,3 @@ PYTHONPATH=src bash scripts/replicate_paper.sh --dry-run \
 ## Results and write-ups
 
 - **[pre-readme.md](pre-readme.md)** — Formal summary tables and interpretation for the constrained replication track (figures match `docs/figures/budget/` when regenerated).
-- **[result.md](result.md)** — Scratch log of console metrics from local runs (optional).
-
