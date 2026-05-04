@@ -24,10 +24,19 @@ def merge_sft_train_with_mined_traces(
     sft_train_path: str | Path,
     mined_traces_path: str | Path,
     output_path: str | Path,
+    max_base_examples: int | None = None,
+    max_mined_examples: int | None = None,
 ) -> tuple[int, int, int]:
-    """Write combined PromptExample JSONL; returns (base_count, mined_count, total)."""
+    """Write combined PromptExample JSONL; returns (base_count, mined_count, total).
+
+    ``max_base_examples`` / ``max_mined_examples`` cap rows **after** loading and
+    conversion (PromptExample counts). Order is preserved: all capped base rows
+    first, then capped mined-derived rows — safe for ``sft_runtime --max-train-examples``.
+    """
 
     base = load_prepared_examples(sft_train_path)
+    if max_base_examples is not None:
+        base = base[:max_base_examples]
     mined_records = load_trace_records(mined_traces_path)
     mined_examples = prepare_sft_examples(
         mined_records,
@@ -35,6 +44,8 @@ def merge_sft_train_with_mined_traces(
         recovery_repeat=1,
         require_recovery_target_correct=False,
     )
+    if max_mined_examples is not None:
+        mined_examples = mined_examples[:max_mined_examples]
     combined = tuple(base) + mined_examples
     write_prompt_examples_jsonl(combined, Path(output_path))
     return len(base), len(mined_examples), len(combined)
@@ -57,6 +68,23 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="Output path for combined PromptExample JSONL.",
     )
+    parser.add_argument(
+        "--max-base-examples",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Keep only the first N rows from --sft-train after load (default: all).",
+    )
+    parser.add_argument(
+        "--max-mined-examples",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Keep only the first N PromptExamples from mined traces after "
+            "prepare_sft_examples (default: all)."
+        ),
+    )
     return parser
 
 
@@ -66,6 +94,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         sft_train_path=args.sft_train,
         mined_traces_path=args.mined_traces,
         output_path=args.output,
+        max_base_examples=args.max_base_examples,
+        max_mined_examples=args.max_mined_examples,
     )
     print(
         f"[merge_sft_corpus] wrote {total} examples ({base_n} from --sft-train, "

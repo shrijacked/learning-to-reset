@@ -238,10 +238,19 @@ run_cmd "$PYTHON" -m learning_to_reset.failure_recovery_traces \
 # Mined JSONL is TraceRecord-shaped; base SFT is PromptExample-shaped — do not cat.
 ###############################################################################
 check_cli "merge_sft_corpus" "$PYTHON" -m learning_to_reset.merge_sft_corpus
-run_cmd "$PYTHON" -m learning_to_reset.merge_sft_corpus \
-    --sft-train "$ARTIFACTS_DIR/sft-train.jsonl" \
-    --mined-traces "$MINED_TRACES_PATH" \
+STEP6_MERGE=(
+    -m learning_to_reset.merge_sft_corpus
+    --sft-train "$ARTIFACTS_DIR/sft-train.jsonl"
+    --mined-traces "$MINED_TRACES_PATH"
     --output "$OUT_DIR/sft-train-combined.jsonl"
+)
+if [[ -n "${LTR_MERGE_MAX_BASE_EXAMPLES:-}" ]]; then
+    STEP6_MERGE+=(--max-base-examples "${LTR_MERGE_MAX_BASE_EXAMPLES}")
+fi
+if [[ -n "${LTR_MERGE_MAX_MINED_EXAMPLES:-}" ]]; then
+    STEP6_MERGE+=(--max-mined-examples "${LTR_MERGE_MAX_MINED_EXAMPLES}")
+fi
+run_cmd "$PYTHON" "${STEP6_MERGE[@]}"
 run_cmd "$PYTHON" -m learning_to_reset.sft_runtime \
     --train "$OUT_DIR/sft-train-combined.jsonl" \
     --validation "$ARTIFACTS_DIR/sft-validation.jsonl" \
