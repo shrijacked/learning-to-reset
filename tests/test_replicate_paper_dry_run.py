@@ -114,6 +114,7 @@ class ReplicatePaperDryRunTests(unittest.TestCase):
             "sft_runtime",
             "eval_runtime",
             "failure_recovery_traces",
+            "merge_sft_corpus",
             "rloo_runtime",
         ):
             self.assertIn(

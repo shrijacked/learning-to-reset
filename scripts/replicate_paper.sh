@@ -235,11 +235,13 @@ run_cmd "$PYTHON" -m learning_to_reset.failure_recovery_traces \
 
 ###############################################################################
 # Step 6: Re-SFT on the combined corpus.
+# Mined JSONL is TraceRecord-shaped; base SFT is PromptExample-shaped — do not cat.
 ###############################################################################
-if [[ "$DRY_RUN" -eq 0 ]]; then
-    cat "$ARTIFACTS_DIR/sft-train.jsonl" "$MINED_TRACES_PATH" \
-        > "$OUT_DIR/sft-train-combined.jsonl"
-fi
+check_cli "merge_sft_corpus" "$PYTHON" -m learning_to_reset.merge_sft_corpus
+run_cmd "$PYTHON" -m learning_to_reset.merge_sft_corpus \
+    --sft-train "$ARTIFACTS_DIR/sft-train.jsonl" \
+    --mined-traces "$MINED_TRACES_PATH" \
+    --output "$OUT_DIR/sft-train-combined.jsonl"
 run_cmd "$PYTHON" -m learning_to_reset.sft_runtime \
     --train "$OUT_DIR/sft-train-combined.jsonl" \
     --validation "$ARTIFACTS_DIR/sft-validation.jsonl" \
