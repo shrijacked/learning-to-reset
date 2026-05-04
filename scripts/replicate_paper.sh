@@ -18,6 +18,9 @@
 # Optional environment:
 #   LTR_EVAL_RAW_MAX_EXAMPLES — cap step 4 raw eval prompts (default 500 when unset).
 #                              Export empty (LTR_EVAL_RAW_MAX_EXAMPLES=) for full file.
+#   LTR_SFT_MAX_TRAIN_EXAMPLES — cap rows for step 3 SFT only (e.g. 10000 for a faster run).
+#                               Does not apply to step 6: combined.jsonl is sft-train then mined;
+#                               capping there would drop mined traces. Unset = full sft-train.jsonl.
 #   LTR_VERIFIER_FEEDBACK=1  — append decode-time verifier hints on step 8 retries
 #                              (passes --verifier-feedback to eval_runtime; not in
 #                              the original paper baseline, see README).
@@ -186,12 +189,18 @@ run_cmd "$PYTHON" -m learning_to_reset.prepare_paper_artifacts \
 # Step 3: First SFT pass on grounded recovery traces.
 ###############################################################################
 check_cli "sft_runtime" "$PYTHON" -m learning_to_reset.sft_runtime
-run_cmd "$PYTHON" -m learning_to_reset.sft_runtime \
-    --train "$ARTIFACTS_DIR/sft-train.jsonl" \
-    --validation "$ARTIFACTS_DIR/sft-validation.jsonl" \
-    --model "$BASE_MODEL" \
-    --output-dir "$SFT_DIR" \
+STEP3_SFT=(
+    -m learning_to_reset.sft_runtime
+    --train "$ARTIFACTS_DIR/sft-train.jsonl"
+    --validation "$ARTIFACTS_DIR/sft-validation.jsonl"
+    --model "$BASE_MODEL"
+    --output-dir "$SFT_DIR"
     --epochs 1.0
+)
+if [[ -n "${LTR_SFT_MAX_TRAIN_EXAMPLES:-}" ]]; then
+    STEP3_SFT+=(--max-train-examples "${LTR_SFT_MAX_TRAIN_EXAMPLES}")
+fi
+run_cmd "$PYTHON" "${STEP3_SFT[@]}"
 
 ###############################################################################
 # Step 4: Baseline raw eval (used to mine failures).

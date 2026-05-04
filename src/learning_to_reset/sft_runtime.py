@@ -134,6 +134,7 @@ def train_sft(
     num_train_epochs: float = 1.0,
     train_batch_size: int = 1,
     eval_batch_size: int = 1,
+    max_train_examples: int | None = None,
 ) -> Dict[str, Any]:
     """Run a supervised fine-tuning loop over prepared JSONL artifacts."""
 
@@ -155,6 +156,14 @@ def train_sft(
             tokenizer.add_special_tokens({"pad_token": "<pad>"})
 
     train_examples = load_prepared_examples(train_path)
+    if max_train_examples is not None:
+        if max_train_examples < 1:
+            raise ValueError("max_train_examples must be >= 1")
+        train_examples = train_examples[:max_train_examples]
+        print(
+            f"[sft_runtime] using first {len(train_examples)} train rows (--max-train-examples)",
+            flush=True,
+        )
     validation_examples = load_prepared_examples(validation_path) if validation_path else ()
 
     train_dataset = Dataset.from_list(
@@ -223,6 +232,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--epochs", type=float, default=1.0, help="Number of epochs.")
     parser.add_argument("--train-batch-size", type=int, default=1, help="Per-device train batch size.")
     parser.add_argument("--eval-batch-size", type=int, default=1, help="Per-device eval batch size.")
+    parser.add_argument(
+        "--max-train-examples",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Only train on the first N rows of the training JSONL (faster; not full-scale).",
+    )
     return parser
 
 
@@ -238,6 +254,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         num_train_epochs=args.epochs,
         train_batch_size=args.train_batch_size,
         eval_batch_size=args.eval_batch_size,
+        max_train_examples=args.max_train_examples,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=True))
     return 0
