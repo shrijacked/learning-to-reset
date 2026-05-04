@@ -12,6 +12,7 @@ from learning_to_reset.countdown_verifier import VerificationResult, score_count
 from learning_to_reset.data import CountdownSample
 from learning_to_reset.model_resolver import resolve_model_name_or_path
 from learning_to_reset.prompts import PromptExample, parse_reasoning_prompt
+from learning_to_reset.rloo_runtime import inference_torch_dtype_for_device
 from learning_to_reset.sft_runtime import load_prepared_examples
 
 
@@ -256,12 +257,29 @@ def _require_transformers():
     return torch, AutoModelForCausalLM, AutoTokenizer
 
 
+def _resolve_raw_inference_dtype(torch: Any, device: Any, name: str) -> Any:
+    """Resolve --inference-dtype for raw generation (auto matches inference_torch_dtype_for_device)."""
+
+    key = name.strip().lower()
+    if key == "bf16":
+        return torch.bfloat16
+    if key in ("fp16", "float16"):
+        return torch.float16
+    if key in ("fp32", "float32"):
+        return torch.float32
+    ds = getattr(device, "type", None) or "cpu"
+    if ds not in ("cuda", "mps", "cpu"):
+        ds = "cpu"
+    return inference_torch_dtype_for_device(torch, ds)
+
+
 def generate_countdown_responses(
     examples: Sequence[PromptExample],
     *,
     model_name_or_path: str,
     max_new_tokens: int = 128,
     temperature: float = 0.0,
+    inference_dtype: str = "auto",
 ) -> List[str]:
     """Generate responses for prepared Countdown prompts."""
 
@@ -274,24 +292,56 @@ def generate_countdown_responses(
         else:
             tokenizer.add_special_tokens({"pad_token": "<pad>"})
 
-    model = AutoModelForCausalLM.from_pretrained(resolved_model_path)
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+    torch_dtype = _resolve_raw_inference_dtype(torch, device, inference_dtype)
+
+    model = AutoModelForCausalLM.from_pretrained(
+        resolved_model_path,
+        torch_dtype=torch_dtype,
+    )
     if getattr(model.config, "vocab_size", 0) < len(tokenizer):
         model.resize_token_embeddings(len(tokenizer))
+    model.to(device)
+
+    try:
+        from tqdm import tqdm as _tqdm_bar
+    except ImportError:
+        _tqdm_bar = None
+
+    print(
+        f"[eval_runtime] raw generation: device={device} dtype={torch_dtype} "
+        f"model={resolved_model_path} prompts={len(examples)}",
+        flush=True,
+    )
+    iterator = (
+        _tqdm_bar(examples, desc="raw eval", unit="prompt", mininterval=0.5)
+        if _tqdm_bar is not None
+        else examples
+    )
 
     responses = []
-    for example in examples:
+    for example in iterator:
         encoded = tokenizer(example.prompt, return_tensors="pt")
+        encoded = {k: t.to(device) for k, t in encoded.items()}
+        gen_kwargs: Dict[str, Any] = {
+            "max_new_tokens": max_new_tokens,
+            "pad_token_id": tokenizer.pad_token_id,
+            "eos_token_id": tokenizer.eos_token_id,
+        }
+        if temperature > 0:
+            gen_kwargs["do_sample"] = True
+            gen_kwargs["temperature"] = max(temperature, 1e-5)
+        else:
+            gen_kwargs["do_sample"] = False
         with torch.no_grad():
-            generation = model.generate(
-                **encoded,
-                max_new_tokens=max_new_tokens,
-                do_sample=temperature > 0,
-                temperature=max(temperature, 1e-5),
-                pad_token_id=tokenizer.pad_token_id,
-                eos_token_id=tokenizer.eos_token_id,
-            )
+            generation = model.generate(**encoded, **gen_kwargs)
         prompt_length = encoded["input_ids"].shape[1]
-        generated_ids = generation[0][prompt_length:]
+        generated_ids = generation[0][prompt_length:].detach().cpu()
         responses.append(tokenizer.decode(generated_ids, skip_special_tokens=True).strip())
     return responses
 
@@ -320,7 +370,11 @@ def evaluate_with_multi_clean_decoder(
     selected_device = _select_device(torch, device)
     resolved_model_path = resolve_model_name_or_path(model_name_or_path)
     tokenizer = _prepare_tokenizer(AutoTokenizer.from_pretrained(resolved_model_path))
-    model = AutoModelForCausalLM.from_pretrained(resolved_model_path)
+    torch_dtype = inference_torch_dtype_for_device(torch, selected_device)
+    model = AutoModelForCausalLM.from_pretrained(
+        resolved_model_path,
+        torch_dtype=torch_dtype,
+    )
     if getattr(model.config, "vocab_size", 0) < len(tokenizer):
         model.resize_token_embeddings(len(tokenizer))
     model.to(selected_device)
@@ -399,18 +453,43 @@ def build_parser() -> argparse.ArgumentParser:
             "Improves retry signal; not part of the original paper baseline."
         ),
     )
+    parser.add_argument(
+        "--max-examples",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Only evaluate the first N prompts from the prepared file. "
+            "replicate_paper.sh sets this via LTR_EVAL_RAW_MAX_EXAMPLES (default 500)."
+        ),
+    )
+    parser.add_argument(
+        "--inference-dtype",
+        choices=("auto", "fp32", "bf16", "fp16"),
+        default="auto",
+        help=(
+            "For --raw-generation only: model weights dtype. "
+            "'auto' uses bf16 on CUDA when supported (recommended on A100)."
+        ),
+    )
     return parser
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     examples = load_prepared_examples(args.prepared_countdown)
+    if args.max_examples is not None:
+        if args.max_examples < 1:
+            raise SystemExit("--max-examples must be >= 1")
+        examples = examples[: args.max_examples]
+        print(f"[eval_runtime] using {len(examples)} examples (--max-examples)", flush=True)
     if args.raw_generation:
         responses = generate_countdown_responses(
             examples,
             model_name_or_path=args.model,
             max_new_tokens=args.max_new_tokens,
             temperature=args.temperature,
+            inference_dtype=args.inference_dtype,
         )
         summary = evaluate_countdown_outputs(examples, responses)
     elif args.max_clean_tries >= 2:

@@ -232,6 +232,19 @@ def _select_device(torch: Any, requested_device: str) -> str:
     return "cpu"
 
 
+def inference_torch_dtype_for_device(torch: Any, device_str: str) -> Any:
+    """Prefer bf16 on CUDA when supported; fp16 on CUDA/MPS otherwise; fp32 on CPU."""
+
+    if device_str == "cuda":
+        is_bf16 = getattr(torch.cuda, "is_bf16_supported", None)
+        if callable(is_bf16) and is_bf16():
+            return torch.bfloat16
+        return torch.float16
+    if device_str == "mps":
+        return torch.float16
+    return torch.float32
+
+
 def _set_seed(seed: int) -> None:
     random.seed(seed)
     try:
@@ -485,7 +498,11 @@ def evaluate_reset_aware_model(
     selected_device = _select_device(torch, device)
     resolved_model_path = resolve_model_name_or_path(model_name_or_path)
     tokenizer = _prepare_tokenizer(AutoTokenizer.from_pretrained(resolved_model_path))
-    model = AutoModelForCausalLM.from_pretrained(resolved_model_path)
+    torch_dtype = inference_torch_dtype_for_device(torch, selected_device)
+    model = AutoModelForCausalLM.from_pretrained(
+        resolved_model_path,
+        torch_dtype=torch_dtype,
+    )
     if getattr(model.config, "vocab_size", 0) < len(tokenizer):
         model.resize_token_embeddings(len(tokenizer))
     model.to(selected_device)

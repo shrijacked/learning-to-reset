@@ -18,6 +18,7 @@ trainer = [
   "datasets",
   "accelerate",
   "torch",
+  "tqdm",
 ]
 
 [tool.setuptools]

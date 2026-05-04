@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
@@ -137,6 +138,13 @@ def train_sft(
     """Run a supervised fine-tuning loop over prepared JSONL artifacts."""
 
     Dataset, AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments = _require_transformers()
+    import torch
+
+    force_cpu = os.environ.get("LTR_FORCE_CPU", "").strip().lower() in ("1", "true", "yes")
+    has_accel = torch.cuda.is_available() or (
+        hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+    )
+    use_cpu = force_cpu or not has_accel
 
     resolved_model_path = resolve_model_name_or_path(model_name_or_path)
     tokenizer = AutoTokenizer.from_pretrained(resolved_model_path)
@@ -176,7 +184,7 @@ def train_sft(
         eval_strategy="no" if eval_dataset is None else "epoch",
         report_to=[],
         remove_unused_columns=False,
-        use_cpu=True,
+        use_cpu=use_cpu,
     )
 
     trainer = Trainer(

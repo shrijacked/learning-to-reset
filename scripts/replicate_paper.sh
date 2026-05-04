@@ -14,6 +14,8 @@
 #   10. Qualitative sample export                (export_qualitative_samples.py)
 #
 # Optional environment:
+#   LTR_EVAL_RAW_MAX_EXAMPLES — cap step 4 raw eval prompts (default 500 when unset).
+#                              Export empty (LTR_EVAL_RAW_MAX_EXAMPLES=) for full file.
 #   LTR_VERIFIER_FEEDBACK=1  — append decode-time verifier hints on step 8 retries
 #                              (passes --verifier-feedback to eval_runtime; not in
 #                              the original paper baseline, see README).
@@ -35,6 +37,8 @@
 #   1 missing dependency or bad arg
 #   2 a pipeline step failed
 set -euo pipefail
+
+export PYTHONUNBUFFERED="${PYTHONUNBUFFERED:-1}"
 
 PYTHON="${PYTHON:-python3}"
 DRY_RUN=0
@@ -120,6 +124,15 @@ if [[ "${LTR_VERIFIER_FEEDBACK:-0}" == "1" ]]; then
     VERIFIER_FEEDBACK_FLAG="--verifier-feedback"
 fi
 
+# Step 4: default 500 prompts for raw eval. Set LTR_EVAL_RAW_MAX_EXAMPLES= to disable the cap.
+if [[ "${LTR_EVAL_RAW_MAX_EXAMPLES-unset}" == "unset" ]]; then
+    LTR_EVAL_RAW_MAX_EXAMPLES=500
+fi
+EVAL_RAW_MAX_ARGS=()
+if [[ -n "${LTR_EVAL_RAW_MAX_EXAMPLES}" ]]; then
+    EVAL_RAW_MAX_ARGS=(--max-examples "${LTR_EVAL_RAW_MAX_EXAMPLES}")
+fi
+
 log() {
     if [[ "$DRY_RUN" -eq 1 ]]; then
         echo "[replicate_paper][dry-run] $*"
@@ -186,7 +199,8 @@ run_cmd "$PYTHON" -m learning_to_reset.eval_runtime \
     --model "$SFT_DIR" \
     --output-dir "$EVAL_RAW_DIR" \
     --max-new-tokens 384 \
-    --raw-generation
+    --raw-generation \
+    "${EVAL_RAW_MAX_ARGS[@]}"
 
 ###############################################################################
 # Step 5: Mine failures into recovery traces, contamination-guarded.
