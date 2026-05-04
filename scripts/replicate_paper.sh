@@ -24,6 +24,7 @@
 #   LTR_RLOO_MAX_TRAIN_EXAMPLES / LTR_RLOO_MAX_VALIDATION_EXAMPLES — cap JSONL rows loaded in
 #                               step 7 (RLOO does not use the full train file per step, but loading
 #                               it still parses every line unless capped).
+#   LTR_EVAL_FINAL_MAX_EXAMPLES — cap step 8 eval prompts (eval_runtime --max-examples).
 #   LTR_VERIFIER_FEEDBACK=1  — append decode-time verifier hints on step 8 retries
 #                              (passes --verifier-feedback to eval_runtime; not in
 #                              the original paper baseline, see README).
@@ -297,6 +298,9 @@ STEP8_EVAL=(
 )
 if [[ "$LTR_VERIFIER_FEEDBACK" == "1" ]]; then
     STEP8_EVAL+=(--verifier-feedback)
+fi
+if [[ -n "${LTR_EVAL_FINAL_MAX_EXAMPLES:-}" ]]; then
+    STEP8_EVAL+=(--max-examples "${LTR_EVAL_FINAL_MAX_EXAMPLES}")
 fi
 run_cmd "$PYTHON" "${STEP8_EVAL[@]}"
 
