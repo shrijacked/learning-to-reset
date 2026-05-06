@@ -46,7 +46,7 @@ Do **not** use `--max-train-examples 8000` on the **combined** file to approxima
 Run everything from the **repository root** with your venv activated.
 
 ```bash
-export OUT_DIR="app/runs/my-budget-run"   # change as you like
+export OUT_DIR="$PWD/runs/my-budget-run"   # change as you like
 export BASE_MODEL="Qwen/Qwen2.5-1.5B-Instruct"
 export SCALE="paper"                       # full data fetch + paper prep recipe
 export RECOVERY_STYLE="grounded"
