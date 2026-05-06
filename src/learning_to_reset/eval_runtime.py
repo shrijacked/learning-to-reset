@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from learning_to_reset.context_manager import response_requests_clean_retry
 from learning_to_reset.countdown_verifier import VerificationResult, score_countdown_response
@@ -119,6 +121,47 @@ def format_verifier_feedback(verification: VerificationResult, sample: Countdown
     )
 
 
+def _progress_enumerate(
+    examples: Sequence[PromptExample],
+    *,
+    desc: str,
+) -> Iterable[Tuple[int, PromptExample]]:
+    """Yield (index, example) with tqdm when available, else periodic prints."""
+
+    n = len(examples)
+    if n == 0:
+        return
+
+    try:
+        from tqdm import tqdm
+    except ImportError:
+        tqdm = None  # type: ignore
+
+    use_tqdm = tqdm is not None and sys.stderr.isatty() and os.environ.get("LTR_NO_TQDM", "").strip() not in (
+        "1",
+        "true",
+        "yes",
+    )
+
+    if use_tqdm:
+        yield from tqdm(
+            enumerate(examples),
+            total=n,
+            desc=desc,
+            unit="prompt",
+            mininterval=0.5,
+            file=sys.stderr,
+        )
+        return
+
+    step = max(1, n // 50)
+    print(f"[eval_runtime] {desc}: {n} prompt(s) (no tty / no tqdm: logging every ~{step})", flush=True)
+    for idx, example in enumerate(examples):
+        if idx == 0 or (idx + 1) % step == 0 or idx == n - 1:
+            print(f"[eval_runtime] {desc}: {idx + 1}/{n}", flush=True)
+        yield idx, example
+
+
 def run_multi_clean_eval_loop(
     examples: Sequence[PromptExample],
     *,
@@ -152,7 +195,7 @@ def run_multi_clean_eval_loop(
     cleaned_count = 0
     cleaned_score_total = 0.0
 
-    for example in examples:
+    for _idx, example in _progress_enumerate(examples, desc="multi-clean eval"):
         sample = build_countdown_sample_from_example(example)
         retry_prompt = _build_retry_prompt(example)
         segments: List[Dict[str, Any]] = []
@@ -378,6 +421,14 @@ def evaluate_with_multi_clean_decoder(
     if getattr(model.config, "vocab_size", 0) < len(tokenizer):
         model.resize_token_embeddings(len(tokenizer))
     model.to(selected_device)
+
+    print(
+        f"[eval_runtime] multi-clean eval: loaded model "
+        f"prompts={len(examples)} max_clean_tries={max_clean_tries} "
+        f"max_new_tokens={max_new_tokens} device={selected_device} "
+        f"(up to {max_clean_tries + 1} generations per prompt)",
+        flush=True,
+    )
 
     def generator(prompt: str, allow_clean: bool) -> str:
         segment = _generate_segment(
