@@ -64,7 +64,7 @@ See **[docs/paper-replication.md](docs/paper-replication.md)** for wall-clock ex
 | `SKIP_NETWORK_CHECK=1` | Skip the Hugging Face connectivity check at startup. |
 | `HF_TOKEN` | Sent as `HUGGING_FACE_HUB_TOKEN` for Hugging Face Hub. |
 | `BASE_MODEL` | Override the Hugging Face model id (defaults depend on `RUN_FULL`). |
-| `LTR_RLOO_STEPS`, `LTR_EVAL_RAW_MAX_EXAMPLES`, `LTR_SFT_MAX_TRAIN_EXAMPLES`, `LTR_MERGE_MAX_*`, `LTR_RLOO_MAX_*`, `LTR_EVAL_FINAL_MAX_EXAMPLES`, `LTR_FORCE_CPU`, … | Passed through to `scripts/replicate_paper.sh`; see the header comment in that file. |
+| `LTR_RLOO_STEPS`, `LTR_MAX_NEW_TOKENS`, `LTR_EVAL_RAW_MAX_EXAMPLES`, `LTR_SFT_MAX_TRAIN_EXAMPLES`, `LTR_MERGE_MAX_*`, `LTR_RLOO_MAX_*`, `LTR_EVAL_FINAL_MAX_EXAMPLES`, `LTR_FORCE_CPU`, … | Passed through to `scripts/replicate_paper.sh`; see the header comment in that file. |
 
 ---
 

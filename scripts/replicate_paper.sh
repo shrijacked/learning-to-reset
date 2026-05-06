@@ -16,6 +16,7 @@
 #   10. Qualitative sample export                (export_qualitative_samples.py)
 #
 # Optional environment:
+#   LTR_MAX_NEW_TOKENS — generation budget for steps 4, 7, and 8 (default 384).
 #   LTR_EVAL_RAW_MAX_EXAMPLES — cap step 4 raw eval prompts (default 500 when unset).
 #                              Export empty (LTR_EVAL_RAW_MAX_EXAMPLES=) for full file.
 #   LTR_SFT_MAX_TRAIN_EXAMPLES — cap rows for step 3 SFT only (e.g. 10000 for a faster run).
@@ -143,6 +144,8 @@ if [[ "${LTR_EVAL_RAW_MAX_EXAMPLES-unset}" == "unset" ]]; then
     LTR_EVAL_RAW_MAX_EXAMPLES=500
 fi
 
+LTR_MAX_NEW_TOKENS="${LTR_MAX_NEW_TOKENS:-384}"
+
 log() {
     if [[ "$DRY_RUN" -eq 1 ]]; then
         echo "[replicate_paper][dry-run] $*"
@@ -217,7 +220,7 @@ STEP4_RAW=(
     --prepared-countdown "$ARTIFACTS_DIR/countdown-train.jsonl"
     --model "$SFT_DIR"
     --output-dir "$EVAL_RAW_DIR"
-    --max-new-tokens 384
+    --max-new-tokens "${LTR_MAX_NEW_TOKENS}"
     --raw-generation
 )
 if [[ -n "${LTR_EVAL_RAW_MAX_EXAMPLES}" ]]; then
@@ -274,7 +277,7 @@ STEP7_RLOO=(
     --output-dir "$RLOO_DIR"
     --steps "$RLOO_STEPS"
     --responses-per-prompt 4
-    --max-new-tokens 384
+    --max-new-tokens "${LTR_MAX_NEW_TOKENS}"
     --temperature 1.0
 )
 if [[ -n "${LTR_RLOO_MAX_TRAIN_EXAMPLES:-}" ]]; then
@@ -293,7 +296,7 @@ STEP8_EVAL=(
     --prepared-countdown "$ARTIFACTS_DIR/countdown-test-hard.jsonl"
     --model "$RLOO_DIR"
     --output-dir "$EVAL_FINAL_DIR"
-    --max-new-tokens 384
+    --max-new-tokens "${LTR_MAX_NEW_TOKENS}"
     --max-clean-tries "$MAX_CLEAN_TRIES"
 )
 if [[ "$LTR_VERIFIER_FEEDBACK" == "1" ]]; then

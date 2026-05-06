@@ -10,10 +10,15 @@ from learning_to_reset.trace_curation import curate_trace
 
 
 DEFAULT_BASE_INSTRUCTIONS = (
-    "Think inside <think> tags and provide the final expression inside <answer> tags."
+    "Think inside <think> tags and provide the final expression inside <answer> tags.\n"
+    "Use only the given numbers, each at most once (unless duplicated in the question), "
+    "and only +, -, *, /, and parentheses.\n"
+    "The <answer> expression must be valid and evaluate exactly to the target.\n"
+    "Before finalizing, verify arithmetic and number usage."
 )
 DEFAULT_CLEAN_INSTRUCTIONS = (
-    "If your search becomes confusing or unproductive, explain the reset and emit <clean>."
+    "If your search becomes confusing or unproductive, explain the reset briefly and emit <clean>, "
+    "then restart with a different approach."
 )
 QUESTION_PREFIX = "Question:"
 

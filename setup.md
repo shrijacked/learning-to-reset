@@ -25,15 +25,17 @@ pip install -e .
 
 These are the **resource-bounded** caps aligned with the “8k first SFT → mine → **7.5k base + 500 mined** → second SFT → RLOO on capped Countdown pools” story:
 
-| Stage | What is capped | Value |
-|--------|----------------|--------|
-| Step 3 — first SFT | Rows from `sft-train.jsonl` | **8000** (`--max-train-examples 8000`) |
-| Step 4 — raw eval (mining) | Prompts decoded | **500** (`--max-examples 500`; matches `replicate_paper.sh` default) |
-| Step 6a — merge | Rows from original SFT train / from mined traces | **7500** + **500** (`merge_sft_corpus` caps) → **8000** lines in `sft-train-combined.jsonl` |
-| Step 6b — second SFT | Training file | **all lines** in combined file (8000 if merge caps as above); no extra cap in the orchestrator |
-| Step 7 — RLOO | Countdown train / val JSONL rows loaded | **8000** / **25000** (optional caps; see note below) |
-| Step 7 — RLOO | Optimization steps | **100** here (tune with `RLOO_STEPS` / `--steps`) |
-| Step 8 — final eval | Hard split | **full** `countdown-test-hard.jsonl` unless you set `--max-examples N` for a smoke test |
+
+| Stage                      | What is capped                                   | Value                                                                                          |
+| -------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Step 3 — first SFT         | Rows from `sft-train.jsonl`                      | **8000** (`--max-train-examples 8000`)                                                         |
+| Step 4 — raw eval (mining) | Prompts decoded                                  | **500** (`--max-examples 500`; matches `replicate_paper.sh` default)                           |
+| Step 6a — merge            | Rows from original SFT train / from mined traces | **7500** + **500** (`merge_sft_corpus` caps) → **8000** lines in `sft-train-combined.jsonl`    |
+| Step 6b — second SFT       | Training file                                    | **all lines** in combined file (8000 if merge caps as above); no extra cap in the orchestrator |
+| Step 7 — RLOO              | Countdown train / val JSONL rows loaded          | **8000** / **25000** (optional caps; see note below)                                           |
+| Step 7 — RLOO              | Optimization steps                               | **100** here (tune with `RLOO_STEPS` / `--steps`)                                              |
+| Step 8 — final eval        | Hard split                                       | **full** `countdown-test-hard.jsonl` unless you set `--max-examples N` for a smoke test        |
+
 
 **RLOO train/val caps.** At paper scale, `countdown-train.jsonl` can be **very** large (on the order of hundreds of thousands of lines). The **8000 / 25000** limits are **not** “using a huge dataset” in absolute terms — they **trim** what gets loaded into RAM and parsed each run so RLOO stays tractable. Compared to the full file they are a **subset**; compared to a tiny pilot (e.g. a few thousand train rows) they are **moderate**. You can **lower** both for faster iteration (noisier validation, less diverse batches) or **drop** `--max-train-examples` / `--max-validation-examples` entirely if you want the full prepared JSONLs (slow and memory-heavy).
 
@@ -181,7 +183,7 @@ python3 -m learning_to_reset.rloo_runtime \
   --max-validation-examples "${RLOO_MAX_VAL:-25000}"
 ```
 
-To use **less** data (faster, lighter): set `RLOO_MAX_TRAIN` / `RLOO_MAX_VAL` smaller before this step, or remove the two `--max-*` lines to load the **entire** prepared train/val files (only if you have the RAM and patience).
+To use **less** data (faster, lighter): set `RLOO_MAX_TRAIN` / `RLOO_MAX_VAL` smaller before this step, or remove the two `--max-`* lines to load the **entire** prepared train/val files (only if you have the RAM and patience).
 
 ---
 
@@ -245,6 +247,7 @@ export LTR_MERGE_MAX_BASE_EXAMPLES=7500
 export LTR_MERGE_MAX_MINED_EXAMPLES=500
 export LTR_RLOO_MAX_TRAIN_EXAMPLES=8000
 export LTR_RLOO_MAX_VALIDATION_EXAMPLES=25000
+export LTR_MAX_NEW_TOKENS=384
 # Step 8: leave LTR_EVAL_FINAL_MAX_EXAMPLES unset for full hard eval
 
 bash scripts/replicate_paper.sh \
@@ -258,6 +261,61 @@ bash scripts/replicate_paper.sh \
 
 ## Troubleshooting
 
-- **`ModuleNotFoundError: learning_to_reset`** — Run `pip install -e .` from the repo root with the active interpreter.
-- **Mining / contamination errors** — Step 4 must use **`countdown-train.jsonl`** (prepared), not the hard test file.
+- `**ModuleNotFoundError: learning_to_reset**` — Run `pip install -e .` from the repo root with the active interpreter.
+- **Mining / contamination errors** — Step 4 must use `**countdown-train.jsonl`** (prepared), not the hard test file.
 - **Disk / cache** — Paper-scale runs need large HF cache and checkpoint space.
+
+---
+
+## One-shot: entire pipeline
+
+This runs **steps 1–10** via `scripts/replicate_paper.sh`. **`scripts/run_budget_pipeline.sh`** sets a **slightly larger default budget** than the manual table (10k first SFT, **750** raw-eval prompts for mining, merge **10k base + 750 mined**, RLOO train load **10k**, val **25k**, **`LTR_MAX_NEW_TOKENS=768`**, 100 RLOO steps, `max_clean_tries=3`). The **step-by-step commands** above still document the **8k / 7.5k+500 / 384** variant. Default output dir: **`runs/my-budget-run/`** (override with `OUT_DIR`).
+
+**Prerequisite:** editable install and HF access (`pip install -e .`, `huggingface-cli login` if needed).
+
+```bash
+cd /path/to/learning-to-reset
+source .venv/bin/activate   # omit if you use system Python
+chmod +x scripts/run_budget_pipeline.sh
+bash scripts/run_budget_pipeline.sh
+```
+
+**Customize** by exporting variables **before** the script (all optional):
+
+```bash
+export OUT_DIR="$PWD/runs/my-new-budget-run"
+export BASE_MODEL="Qwen/Qwen2.5-1.5B-Instruct"
+export SCALE="paper"
+export RLOO_STEPS="100"
+export MAX_CLEAN_TRIES="3"
+export LTR_SFT_MAX_TRAIN_EXAMPLES="8000"
+export LTR_EVAL_RAW_MAX_EXAMPLES="500"
+export LTR_MERGE_MAX_BASE_EXAMPLES="7500"
+export LTR_MERGE_MAX_MINED_EXAMPLES="500"
+export LTR_RLOO_MAX_TRAIN_EXAMPLES="8000"
+export LTR_RLOO_MAX_VALIDATION_EXAMPLES="25000"
+# Optional step-8 smoke cap:
+# export LTR_EVAL_FINAL_MAX_EXAMPLES="128"
+# Generation token budget for raw eval, RLOO, and final eval (default 384):
+# export LTR_MAX_NEW_TOKENS="768"
+
+bash scripts/run_budget_pipeline.sh
+```
+
+**Equivalent without the helper script** (three lines: `cd`, exports, `replicate_paper.sh`):
+
+```bash
+cd /path/to/learning-to-reset && source .venv/bin/activate
+export OUT_DIR="$PWD/runs/my-budget-run" RLOO_STEPS=100 \
+  LTR_SFT_MAX_TRAIN_EXAMPLES=8000 LTR_EVAL_RAW_MAX_EXAMPLES=500 \
+  LTR_MERGE_MAX_BASE_EXAMPLES=7500 LTR_MERGE_MAX_MINED_EXAMPLES=500 \
+  LTR_RLOO_MAX_TRAIN_EXAMPLES=8000 LTR_RLOO_MAX_VALIDATION_EXAMPLES=25000
+bash scripts/replicate_paper.sh \
+  --base-model Qwen/Qwen2.5-1.5B-Instruct \
+  --scale-override paper \
+  --out-dir "$OUT_DIR" \
+  --rloo-steps "$RLOO_STEPS" \
+  --max-clean-tries 3
+```
+
+**Note:** `run.sh` creates a fresh venv and uses different defaults (pilot vs full). For a **manual install** and the **budget numbers in this file**, prefer `**scripts/run_budget_pipeline.sh`** or the `**replicate_paper.sh**` line above.

@@ -7,15 +7,8 @@ from dataclasses import dataclass
 from learning_to_reset.context_manager import manage_single_clean_cycle
 from learning_to_reset.countdown_verifier import score_countdown_response
 from learning_to_reset.data import CountdownSample
+from learning_to_reset.prompts import DEFAULT_BASE_INSTRUCTIONS, DEFAULT_CLEAN_INSTRUCTIONS
 from learning_to_reset.rloo import TrajectorySample
-
-
-DEFAULT_BASE_INSTRUCTIONS = (
-    "Think inside <think> tags and provide the final expression inside <answer> tags."
-)
-DEFAULT_CLEAN_INSTRUCTIONS = (
-    "If your search becomes confusing or unproductive, explain the reset and emit <clean>."
-)
 
 
 @dataclass(frozen=True)
