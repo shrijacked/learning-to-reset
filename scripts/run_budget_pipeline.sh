@@ -33,7 +33,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 # --- defaults: “new budget” (vs setup.md manual 8k / 7.5k+500 / 384 tokens) ---
-export OUT_DIR="${OUT_DIR:-$REPO_ROOT/runs/my-budget-run}"
+export OUT_DIR="${OUT_DIR:-$REPO_ROOT/runs/my-new-budget-run}"
 export BASE_MODEL="${BASE_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}"
 export SCALE="${SCALE:-paper}"
 export RLOO_STEPS="${RLOO_STEPS:-100}"
