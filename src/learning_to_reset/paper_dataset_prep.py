@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 import json
 from pathlib import Path
 from typing import Any, Dict
@@ -12,6 +13,12 @@ from learning_to_reset.dataset_prep import write_prompt_examples_jsonl
 from learning_to_reset.pipeline import prepare_countdown_examples, prepare_sft_examples
 
 
+TRACE_DOMAIN_BY_MODE = {
+    "reference": "reference-behavior",
+    "synthetic-countdown": "countdown-synthetic",
+}
+
+
 def _train_validation_split(items, *, val_ratio: float):
     if not 0 <= val_ratio < 1:
         raise ValueError("val_ratio must be between 0 and 1.")
@@ -19,6 +26,31 @@ def _train_validation_split(items, *, val_ratio: float):
     items = tuple(items)
     train_end = int(len(items) * (1 - val_ratio))
     return items[:train_end], items[train_end:]
+
+
+def _count_trace_domains(examples) -> Dict[str, int]:
+    counts = Counter(
+        str(example.metadata.get("trace_domain", "unknown"))
+        for example in examples
+    )
+    return dict(sorted(counts.items()))
+
+
+def _composition_stats(examples) -> Dict[str, Any]:
+    rows_with_clean = 0
+    rows_with_answer = 0
+    for example in examples:
+        text = f"{example.prompt}\n{example.response}"
+        if "<clean>" in text:
+            rows_with_clean += 1
+        if "<answer>" in text:
+            rows_with_answer += 1
+    return {
+        "total_rows": len(examples),
+        "trace_domain": _count_trace_domains(examples),
+        "rows_with_clean": rows_with_clean,
+        "rows_with_answer": rows_with_answer,
+    }
 
 
 def export_paper_prepared_datasets(
@@ -33,17 +65,21 @@ def export_paper_prepared_datasets(
     include_recovery_examples: bool = False,
     recovery_repeat: int = 1,
     require_recovery_target_correct: bool = False,
+    trace_source_mode: str = "reference",
 ) -> Dict[str, Any]:
     """Prepare artifacts using distinct Countdown train/eval source files."""
 
     output_root = Path(output_dir)
     output_root.mkdir(parents=True, exist_ok=True)
 
+    trace_records = load_trace_records(trace_path)
+    trace_domain = TRACE_DOMAIN_BY_MODE.get(trace_source_mode)
     trace_examples = prepare_sft_examples(
-        load_trace_records(trace_path),
+        trace_records,
         include_recovery_examples=include_recovery_examples,
         recovery_repeat=recovery_repeat,
         require_recovery_target_correct=require_recovery_target_correct,
+        trace_domain=trace_domain,
     )
     sft_train, sft_validation = _train_validation_split(trace_examples, val_ratio=sft_val_ratio)
 
@@ -89,6 +125,14 @@ def export_paper_prepared_datasets(
         "require_recovery_target_correct": require_recovery_target_correct,
         "sft_val_ratio": sft_val_ratio,
         "countdown_val_ratio": countdown_val_ratio,
+        "trace_source_mode": trace_source_mode,
+        "trace_source_path": str(Path(trace_path)),
+        "trace_source_counts": _count_trace_domains(trace_examples),
+        "sft_composition": {
+            "train": _composition_stats(sft_train),
+            "validation": _composition_stats(sft_validation),
+            "all": _composition_stats(trace_examples),
+        },
     }
     (output_root / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=True) + "\n",

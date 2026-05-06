@@ -129,6 +129,7 @@ def build_positive_trace_record(
         "is_correct": True,
         "metadata": {
             "source": "synthetic_countdown_solver",
+            "trace_domain": "countdown-synthetic",
             "numbers": list(sample.numbers),
             "target": sample.target,
             "solution_expression": solution_expression,
@@ -517,6 +518,7 @@ def build_negative_trace_record(
         "is_correct": False,
         "metadata": {
             "source": "synthetic_countdown_solver",
+            "trace_domain": "countdown-synthetic",
             "recovery_style": recovery_style,
             "numbers": list(sample.numbers),
             "target": sample.target,
@@ -531,7 +533,7 @@ def build_synthetic_trace_records(
     *,
     include_negative: bool = True,
     solutions_per_sample: int = 1,
-    recovery_style: RecoveryStyle = "walkthrough",
+    recovery_style: RecoveryStyle = "grounded",
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Build a paired synthetic trace corpus from Countdown samples."""
 
@@ -586,7 +588,7 @@ def generate_synthetic_trace_corpus(
     max_samples: int | None = None,
     include_negative: bool = True,
     solutions_per_sample: int = 1,
-    recovery_style: RecoveryStyle = "walkthrough",
+    recovery_style: RecoveryStyle = "grounded",
 ) -> Dict[str, Any]:
     """Write a synthetic Countdown-aligned trace corpus to JSONL."""
 
@@ -646,7 +648,7 @@ def build_parser() -> argparse.ArgumentParser:
             "both",
             "all",
         ),
-        default="walkthrough",
+        default="grounded",
         help="Retry response style for synthetic negative traces.",
     )
     return parser

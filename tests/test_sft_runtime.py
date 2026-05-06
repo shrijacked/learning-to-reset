@@ -72,6 +72,36 @@ class SFTRuntimeTests(unittest.TestCase):
         self.assertEqual(capped[0].metadata["i"], 0)
         self.assertEqual(capped[1].metadata["i"], 1)
 
+    def test_load_prepared_examples_rejects_missing_prompt_in_strict_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "prepared.jsonl"
+            path.write_text(
+                json.dumps({"response": "<answer>42</answer>"}) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "row 1.*prompt"):
+                load_prepared_examples(path)
+
+    def test_load_prepared_examples_rejects_extra_top_level_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "prepared.jsonl"
+            path.write_text(
+                json.dumps(
+                    {
+                        "prompt": "Question: example",
+                        "response": "<answer>42</answer>",
+                        "metadata": {},
+                        "raw_trace": "<answer>42</answer>",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "unexpected top-level keys"):
+                load_prepared_examples(path)
+
     def test_render_training_text_combines_prompt_and_response(self) -> None:
         example = PromptExample(prompt="Question: solve", response="<answer>42</answer>")
 

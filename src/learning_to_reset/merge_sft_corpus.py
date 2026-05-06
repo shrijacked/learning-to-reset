@@ -14,9 +14,24 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from learning_to_reset.data import load_trace_records
-from learning_to_reset.dataset_prep import write_prompt_examples_jsonl
+from learning_to_reset.dataset_prep import serialize_prompt_example, write_prompt_examples_jsonl
 from learning_to_reset.pipeline import prepare_sft_examples
+from learning_to_reset.prompts import PromptExample
+from learning_to_reset.sft_schema import validate_prompt_example_payload
 from learning_to_reset.sft_runtime import load_prepared_examples
+
+
+def _validate_prompt_examples(
+    examples: Sequence[PromptExample],
+    *,
+    label: str,
+) -> None:
+    for index, example in enumerate(examples, start=1):
+        validate_prompt_example_payload(
+            serialize_prompt_example(example),
+            path=label,
+            row_number=index,
+        )
 
 
 def merge_sft_train_with_mined_traces(
@@ -34,18 +49,21 @@ def merge_sft_train_with_mined_traces(
     first, then capped mined-derived rows — safe for ``sft_runtime --max-train-examples``.
     """
 
-    base = load_prepared_examples(sft_train_path)
+    base = load_prepared_examples(sft_train_path, strict_input_schema=True)
     if max_base_examples is not None:
         base = base[:max_base_examples]
+    _validate_prompt_examples(base, label="base SFT examples")
     mined_records = load_trace_records(mined_traces_path)
     mined_examples = prepare_sft_examples(
         mined_records,
         include_recovery_examples=True,
         recovery_repeat=1,
         require_recovery_target_correct=False,
+        trace_domain="mined-recovery",
     )
     if max_mined_examples is not None:
         mined_examples = mined_examples[:max_mined_examples]
+    _validate_prompt_examples(mined_examples, label="mined-converted examples")
     combined = tuple(base) + mined_examples
     write_prompt_examples_jsonl(combined, Path(output_path))
     return len(base), len(mined_examples), len(combined)

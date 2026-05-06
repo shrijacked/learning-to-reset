@@ -7,20 +7,23 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from learning_to_reset.model_resolver import resolve_model_name_or_path
 from learning_to_reset.prompts import PromptExample
+from learning_to_reset.sft_schema import iter_prompt_example_payloads
 
 
 def load_prepared_examples(
     path: str | Path,
     max_examples: int | None = None,
+    strict_input_schema: bool = True,
 ) -> tuple[PromptExample, ...]:
     """Load prompt/response examples from a prepared JSONL file (streaming).
 
     When ``max_examples`` is set, stop after that many non-blank rows so large
-    files are not fully read or parsed.
+    files are not fully read or parsed. Strict schema mode rejects malformed
+    rows before they can silently enter SFT.
     """
 
     if max_examples is not None and max_examples < 1:
@@ -28,20 +31,16 @@ def load_prepared_examples(
 
     source = Path(path)
     examples: list[PromptExample] = []
-    with source.open(encoding="utf-8") as handle:
-        for line in handle:
-            if not line.strip():
-                continue
-            payload = json.loads(line)
-            examples.append(
-                PromptExample(
-                    prompt=payload["prompt"],
-                    response=payload.get("response", ""),
-                    metadata=payload.get("metadata", {}),
-                )
+    for _, payload in iter_prompt_example_payloads(source, strict=strict_input_schema):
+        examples.append(
+            PromptExample(
+                prompt=payload["prompt"],
+                response=payload.get("response", ""),
+                metadata=dict(payload.get("metadata", {})),
             )
-            if max_examples is not None and len(examples) >= max_examples:
-                break
+        )
+        if max_examples is not None and len(examples) >= max_examples:
+            break
     return tuple(examples)
 
 
@@ -148,6 +147,7 @@ def train_sft(
     train_batch_size: int = 1,
     eval_batch_size: int = 1,
     max_train_examples: int | None = None,
+    strict_input_schema: bool = True,
 ) -> Dict[str, Any]:
     """Run a supervised fine-tuning loop over prepared JSONL artifacts."""
 
@@ -170,13 +170,24 @@ def train_sft(
 
     if max_train_examples is not None and max_train_examples < 1:
         raise ValueError("max_train_examples must be >= 1")
-    train_examples = load_prepared_examples(train_path, max_train_examples)
+    train_examples = load_prepared_examples(
+        train_path,
+        max_train_examples,
+        strict_input_schema=strict_input_schema,
+    )
     if max_train_examples is not None:
         print(
             f"[sft_runtime] using first {len(train_examples)} train rows (--max-train-examples)",
             flush=True,
         )
-    validation_examples = load_prepared_examples(validation_path) if validation_path else ()
+    validation_examples = (
+        load_prepared_examples(
+            validation_path,
+            strict_input_schema=strict_input_schema,
+        )
+        if validation_path
+        else ()
+    )
 
     train_dataset = Dataset.from_list(
         [tokenize_training_example(example, tokenizer, max_length=max_length) for example in train_examples]
@@ -251,6 +262,19 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="N",
         help="Only train on the first N rows of the training JSONL (faster; not full-scale).",
     )
+    parser.add_argument(
+        "--strict-input-schema",
+        dest="strict_input_schema",
+        action="store_true",
+        default=True,
+        help="Reject any train/validation row that is not strict PromptExample JSONL.",
+    )
+    parser.add_argument(
+        "--no-strict-input-schema",
+        dest="strict_input_schema",
+        action="store_false",
+        help="Disable strict PromptExample schema validation for legacy corpora.",
+    )
     return parser
 
 
@@ -267,6 +291,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         train_batch_size=args.train_batch_size,
         eval_batch_size=args.eval_batch_size,
         max_train_examples=args.max_train_examples,
+        strict_input_schema=args.strict_input_schema,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=True))
     return 0

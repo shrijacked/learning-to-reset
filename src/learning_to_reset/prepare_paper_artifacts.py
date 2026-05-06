@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 from typing import Any, Dict, Mapping, Optional, Sequence
 
 from learning_to_reset.paper_dataset_prep import export_paper_prepared_datasets
@@ -59,6 +60,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--countdown-train", required=True, help="Path to the Countdown train JSON/JSONL file.")
     parser.add_argument("--countdown-eval", required=True, help="Path to the Countdown eval JSON/JSONL file.")
     parser.add_argument("--output-dir", required=True, help="Directory for prepared JSONL outputs.")
+    parser.add_argument(
+        "--trace-source-mode",
+        choices=("reference", "synthetic-countdown", "mixed"),
+        default="reference",
+        help="SFT trace source annotation written to manifest and row metadata.",
+    )
     parser.add_argument(
         "--scale",
         choices=sorted(SCALE_PRESETS),
@@ -141,8 +148,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         require_recovery_target_correct=bool(
             configured["require_recovery_target_correct"]
         ),
+        trace_source_mode=args.trace_source_mode,
     )
     manifest["scale"] = args.scale
+    output_manifest_path = Path(args.output_dir) / "manifest.json"
+    output_manifest_path.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=True) + "\n",
+        encoding="utf-8",
+    )
     print(json.dumps(manifest, indent=2, ensure_ascii=True))
     return 0
 

@@ -66,6 +66,12 @@ See **[docs/paper-replication.md](docs/paper-replication.md)** for wall-clock ex
 | `BASE_MODEL` | Override the Hugging Face model id (defaults depend on `RUN_FULL`). |
 | `LTR_RLOO_STEPS`, `LTR_EVAL_RAW_MAX_EXAMPLES`, `LTR_SFT_MAX_TRAIN_EXAMPLES`, `LTR_MERGE_MAX_*`, `LTR_RLOO_MAX_*`, `LTR_EVAL_FINAL_MAX_EXAMPLES`, `LTR_FORCE_CPU`, … | Passed through to `scripts/replicate_paper.sh`; see the header comment in that file. |
 
+The replication script now defaults SFT priming to Countdown-native synthetic traces. Use
+`--sft-source-mode reference` for legacy reference-trace reproduction, or
+`--sft-source-mode mixed --sft-mix-reference-ratio 0.1` to add a small sampled
+reference-trace regularizer. Strict PromptExample schema validation runs before
+each SFT pass in the pipeline.
+
 ---
 
 ## Manual setup (developers)
@@ -105,6 +111,7 @@ Drive only the orchestrator (you must install deps yourself):
 PYTHONPATH=src bash scripts/replicate_paper.sh \
   --base-model Qwen/Qwen2.5-0.5B \
   --scale-override pilot \
+  --sft-source-mode synthetic-countdown \
   --out-dir runs/my-run \
   --rloo-steps 15
 ```

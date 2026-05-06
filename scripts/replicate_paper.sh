@@ -29,6 +29,13 @@
 #                              (passes --verifier-feedback to eval_runtime; not in
 #                              the original paper baseline, see README).
 #
+# SFT source controls:
+#   --sft-source-mode {reference,synthetic-countdown,mixed}
+#   --sft-mix-reference-ratio FLOAT
+#   --synthetic-max-samples N
+#   --synthetic-solutions-per-sample N
+#   --synthetic-recovery-style {walkthrough,verification,contrastive,grounded,both,all}
+#
 # Usage:
 #   bash scripts/replicate_paper.sh --base-model Qwen/Qwen2.5-1.5B-Instruct \
 #                                   --out-dir runs/replicate-paper-2026-04-26
@@ -66,9 +73,14 @@ SCALE="paper"
 RECOVERY_STYLE="grounded"
 MAX_CLEAN_TRIES=3
 RLOO_STEPS=200
+SFT_SOURCE_MODE="synthetic-countdown"
+SFT_MIX_REFERENCE_RATIO="0.0"
+SYNTHETIC_MAX_SAMPLES=""
+SYNTHETIC_SOLUTIONS_PER_SAMPLE=1
+SYNTHETIC_RECOVERY_STYLE="grounded"
 
 print_usage() {
-    sed -n '2,30p' "$0"
+    sed -n '2,45p' "$0"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -101,6 +113,26 @@ while [[ $# -gt 0 ]]; do
             RLOO_STEPS="$2"
             shift 2
             ;;
+        --sft-source-mode)
+            SFT_SOURCE_MODE="$2"
+            shift 2
+            ;;
+        --sft-mix-reference-ratio)
+            SFT_MIX_REFERENCE_RATIO="$2"
+            shift 2
+            ;;
+        --synthetic-max-samples)
+            SYNTHETIC_MAX_SAMPLES="$2"
+            shift 2
+            ;;
+        --synthetic-solutions-per-sample)
+            SYNTHETIC_SOLUTIONS_PER_SAMPLE="$2"
+            shift 2
+            ;;
+        --synthetic-recovery-style)
+            SYNTHETIC_RECOVERY_STYLE="$2"
+            shift 2
+            ;;
         -h|--help)
             print_usage
             exit 0
@@ -123,6 +155,15 @@ if [[ -z "$OUT_DIR" ]]; then
     exit 1
 fi
 
+case "$SFT_SOURCE_MODE" in
+    reference|synthetic-countdown|mixed)
+        ;;
+    *)
+        echo "ERROR: --sft-source-mode must be one of reference, synthetic-countdown, mixed." >&2
+        exit 1
+        ;;
+esac
+
 mkdir -p "$OUT_DIR"
 SOURCES_DIR="$OUT_DIR/sources"
 ARTIFACTS_DIR="$OUT_DIR/artifacts"
@@ -134,6 +175,10 @@ EVAL_FINAL_DIR="$OUT_DIR/eval-final"
 EXTENSIONS_DIR="$OUT_DIR/extensions"
 QUALITATIVE_PATH="$OUT_DIR/qualitative.md"
 MINED_TRACES_PATH="$OUT_DIR/mined-recovery-traces.jsonl"
+REFERENCE_TRACES_PATH="$SOURCES_DIR/reference-traces.jsonl"
+SYNTHETIC_TRACES_PATH="$SOURCES_DIR/sft-synthetic-traces.jsonl"
+MIXED_TRACES_PATH="$SOURCES_DIR/sft-mixed-traces.jsonl"
+SELECTED_TRACES_PATH="$REFERENCE_TRACES_PATH"
 
 # Optional step-8 flag (avoid empty-array + set -u pitfalls).
 LTR_VERIFIER_FEEDBACK="${LTR_VERIFIER_FEEDBACK:-0}"
@@ -179,15 +224,56 @@ run_cmd "$PYTHON" -m learning_to_reset.paper_sources \
     --output-dir "$SOURCES_DIR"
 
 ###############################################################################
+# Step 1.5: Generate/select SFT trace source.
+###############################################################################
+case "$SFT_SOURCE_MODE" in
+    reference)
+        SELECTED_TRACES_PATH="$REFERENCE_TRACES_PATH"
+        ;;
+    synthetic-countdown|mixed)
+        check_cli "synthetic_countdown_traces" "$PYTHON" -m learning_to_reset.synthetic_countdown_traces
+        SYNTHETIC_CMD=(
+            -m learning_to_reset.synthetic_countdown_traces
+            --countdown "$SOURCES_DIR/countdown-train.jsonl"
+            --output-path "$SYNTHETIC_TRACES_PATH"
+            --solutions-per-sample "$SYNTHETIC_SOLUTIONS_PER_SAMPLE"
+            --recovery-style "$SYNTHETIC_RECOVERY_STYLE"
+        )
+        if [[ -n "$SYNTHETIC_MAX_SAMPLES" ]]; then
+            SYNTHETIC_CMD+=(--max-samples "$SYNTHETIC_MAX_SAMPLES")
+        fi
+        run_cmd "$PYTHON" "${SYNTHETIC_CMD[@]}"
+        SELECTED_TRACES_PATH="$SYNTHETIC_TRACES_PATH"
+        if [[ "$SFT_SOURCE_MODE" == "mixed" ]]; then
+            check_cli "mix_sft_trace_sources" "$PYTHON" -m learning_to_reset.mix_sft_trace_sources
+            run_cmd "$PYTHON" -m learning_to_reset.mix_sft_trace_sources \
+                --synthetic "$SYNTHETIC_TRACES_PATH" \
+                --reference "$REFERENCE_TRACES_PATH" \
+                --output-path "$MIXED_TRACES_PATH" \
+                --reference-ratio "$SFT_MIX_REFERENCE_RATIO"
+            SELECTED_TRACES_PATH="$MIXED_TRACES_PATH"
+        fi
+        ;;
+esac
+log "SFT source mode: ${SFT_SOURCE_MODE} (${SELECTED_TRACES_PATH})"
+
+###############################################################################
 # Step 2: Prepare SFT + Countdown artifacts (paper recipe).
 ###############################################################################
 check_cli "prepare_paper_artifacts" "$PYTHON" -m learning_to_reset.prepare_paper_artifacts
 run_cmd "$PYTHON" -m learning_to_reset.prepare_paper_artifacts \
     --scale "$SCALE" \
-    --traces "$SOURCES_DIR/reference-traces.jsonl" \
+    --traces "$SELECTED_TRACES_PATH" \
+    --trace-source-mode "$SFT_SOURCE_MODE" \
     --countdown-train "$SOURCES_DIR/countdown-train.jsonl" \
     --countdown-eval "$SOURCES_DIR/countdown-eval.jsonl" \
     --output-dir "$ARTIFACTS_DIR"
+
+check_cli "sft_corpus_inspect" "$PYTHON" -m learning_to_reset.sft_corpus_inspect
+run_cmd "$PYTHON" -m learning_to_reset.sft_corpus_inspect \
+    --path "$ARTIFACTS_DIR/sft-train.jsonl" \
+    --path "$ARTIFACTS_DIR/sft-validation.jsonl" \
+    --output "$ARTIFACTS_DIR/sft-composition-report.json"
 
 ###############################################################################
 # Step 3: First SFT pass on grounded recovery traces.
@@ -200,6 +286,7 @@ STEP3_SFT=(
     --model "$BASE_MODEL"
     --output-dir "$SFT_DIR"
     --epochs 1.0
+    --strict-input-schema
 )
 if [[ -n "${LTR_SFT_MAX_TRAIN_EXAMPLES:-}" ]]; then
     STEP3_SFT+=(--max-train-examples "${LTR_SFT_MAX_TRAIN_EXAMPLES}")
@@ -255,12 +342,17 @@ if [[ -n "${LTR_MERGE_MAX_MINED_EXAMPLES:-}" ]]; then
     STEP6_MERGE+=(--max-mined-examples "${LTR_MERGE_MAX_MINED_EXAMPLES}")
 fi
 run_cmd "$PYTHON" "${STEP6_MERGE[@]}"
+run_cmd "$PYTHON" -m learning_to_reset.sft_corpus_inspect \
+    --path "$OUT_DIR/sft-train-combined.jsonl" \
+    --path "$ARTIFACTS_DIR/sft-validation.jsonl" \
+    --output "$OUT_DIR/sft-composition-combined-report.json"
 run_cmd "$PYTHON" -m learning_to_reset.sft_runtime \
     --train "$OUT_DIR/sft-train-combined.jsonl" \
     --validation "$ARTIFACTS_DIR/sft-validation.jsonl" \
     --model "$BASE_MODEL" \
     --output-dir "$SFT2_DIR" \
-    --epochs 1.0
+    --epochs 1.0 \
+    --strict-input-schema
 
 ###############################################################################
 # Step 7: Reset-aware RLOO.
