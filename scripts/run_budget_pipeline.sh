@@ -33,6 +33,11 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 # --- defaults: “new budget” (vs setup.md manual 8k / 7.5k+500 / 384 tokens) ---
+# If OUT_DIR is already exported (e.g. from manual setup.md), it wins over the default below.
+if [[ -n "${OUT_DIR:-}" ]]; then
+  echo "[run_budget_pipeline] NOTE: OUT_DIR is already set in your shell: $OUT_DIR" >&2
+  echo "[run_budget_pipeline]      This overrides the script default (runs/my-new-budget-run). Use: unset OUT_DIR" >&2
+fi
 export OUT_DIR="${OUT_DIR:-$REPO_ROOT/runs/my-new-budget-run}"
 export BASE_MODEL="${BASE_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}"
 export SCALE="${SCALE:-paper}"

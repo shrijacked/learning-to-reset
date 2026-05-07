@@ -269,13 +269,16 @@ bash scripts/replicate_paper.sh \
 
 ## One-shot: entire pipeline
 
-This runs **steps 1–10** via `scripts/replicate_paper.sh`. **`scripts/run_budget_pipeline.sh`** sets a **slightly larger default budget** than the manual table (10k first SFT, **750** raw-eval prompts for mining, merge **10k base + 750 mined**, RLOO train load **10k**, val **25k**, **`LTR_MAX_NEW_TOKENS=768`**, 100 RLOO steps, `max_clean_tries=3`). The **step-by-step commands** above still document the **8k / 7.5k+500 / 384** variant. Default output dir: **`runs/my-budget-run/`** (override with `OUT_DIR`).
+This runs **steps 1–10** via `scripts/replicate_paper.sh`. **`scripts/run_budget_pipeline.sh`** sets a **slightly larger default budget** than the manual table (10k first SFT, **750** raw-eval prompts for mining, merge **10k base + 750 mined**, RLOO train load **10k**, val **25k**, **`LTR_MAX_NEW_TOKENS=768`**, 100 RLOO steps, `max_clean_tries=3`). The **step-by-step commands** above still document the **8k / 7.5k+500 / 384** variant. Default output dir for the helper: **`runs/my-new-budget-run/`** (override with `OUT_DIR`).
 
 **Prerequisite:** editable install and HF access (`pip install -e .`, `huggingface-cli login` if needed).
+
+If you already **`export OUT_DIR=...`** from the manual steps above in the **same shell**, that value is reused and **overrides** the helper’s default. Use **`unset OUT_DIR`** first, or set explicitly: **`OUT_DIR="$PWD/runs/my-new-budget-run" bash scripts/run_budget_pipeline.sh`**.
 
 ```bash
 cd /path/to/learning-to-reset
 source .venv/bin/activate   # omit if you use system Python
+unset OUT_DIR   # only if you exported OUT_DIR earlier for manual steps
 chmod +x scripts/run_budget_pipeline.sh
 bash scripts/run_budget_pipeline.sh
 ```
