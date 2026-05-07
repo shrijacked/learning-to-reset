@@ -84,13 +84,18 @@ class PaperDatasetPrepTests(unittest.TestCase):
                 sft_val_ratio=0.5,
                 countdown_val_ratio=0.5,
                 allow_clean=True,
+                trace_source_mode="synthetic-countdown",
             )
             test_payload = (output_dir / "countdown-test.jsonl").read_text(encoding="utf-8").splitlines()
+            sft_payload = (output_dir / "sft-train.jsonl").read_text(encoding="utf-8").splitlines()
 
         self.assertEqual(manifest["countdown"]["test"], 1)
         self.assertEqual(len(test_payload), 1)
         self.assertIn('"source_id": "c3"', test_payload[0])
         self.assertEqual(manifest["countdown"]["test_hard"], 0)
+        self.assertEqual(manifest["trace_source_mode"], "synthetic-countdown")
+        self.assertEqual(manifest["trace_source_counts"]["countdown-synthetic"], 2)
+        self.assertIn('"trace_domain": "countdown-synthetic"', sft_payload[0])
 
     def test_export_paper_prepared_datasets_writes_hard_eval_slice(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

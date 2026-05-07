@@ -86,15 +86,25 @@ bash scripts/replicate_paper.sh \
     --out-dir runs/replicate-paper-$(date +%Y-%m-%d)
 ```
 
+By default, SFT uses Countdown-native synthetic traces generated from
+`sources/countdown-train.jsonl`, with grounded recovery supervision. For
+strict legacy reproduction against the original reference behavior traces,
+add `--sft-source-mode reference`. For a low-ratio regularized corpus, use
+`--sft-source-mode mixed --sft-mix-reference-ratio 0.1`.
+
 The script writes to a single `--out-dir`. Layout:
 
 ```
 runs/replicate-paper-YYYY-MM-DD/
 ├── sources/                   # raw HF datasets, paper scale
+│   ├── sft-synthetic-traces.jsonl
+│   └── sft-mixed-traces.jsonl # only when --sft-source-mode mixed
 ├── artifacts/                 # prepared SFT + Countdown JSONL
+│   └── sft-composition-report.json
 ├── sft/                       # checkpoint after pass 1
 ├── mined-recovery-traces.jsonl# deep-verify-filtered failures
 ├── sft-train-combined.jsonl   # sft-train + mined recoveries
+├── sft-composition-combined-report.json
 ├── sft-mined/                 # checkpoint after pass 2
 ├── rloo/                      # final reset-aware policy
 ├── eval-raw/                  # raw baseline eval (Step 4)
@@ -112,8 +122,10 @@ shape. Failures here mean re-run that step before moving on.
 |------|----------------------------------------------|--------------------------------------------------|
 | 1    | `sources/countdown-train.jsonl`              | `wc -l` ≈ 60_000                                  |
 | 1    | `sources/countdown-eval.jsonl`               | `wc -l` ≈ 3_000                                   |
+| 1.5  | `sources/sft-synthetic-traces.jsonl`         | generated unless `--sft-source-mode reference`    |
 | 2    | `artifacts/sft-train.jsonl`                  | `wc -l` ≥ 50_000                                  |
 | 2    | `artifacts/manifest.json`                    | `"scale": "paper"`                                |
+| 2    | `artifacts/sft-composition-report.json`      | non-empty `trace_domain` counts                   |
 | 3    | `sft/pytorch_model.bin` (or shards)          | `ls -la` ≥ 1.5 GB                                 |
 | 4    | `eval-raw/summary.json`                      | `accuracy` ≈ 0.13–0.15                            |
 | 5    | `mined-recovery-traces.jsonl`                | `wc -l` ≥ 1_000                                   |
@@ -161,6 +173,7 @@ part of the original paper baseline; use it for pilot ablations. On Qwen
 | Symptom                                              | Likely cause                                | Fix                                                  |
 |------------------------------------------------------|---------------------------------------------|------------------------------------------------------|
 | OOM during SFT pass 1                                | batch size too large for 40 GB              | `--gradient-accumulation-steps 4`                    |
+| SFT schema validation fails before training          | malformed non-PromptExample SFT row         | inspect row/path in the error; regenerate artifacts  |
 | Tokenizer "regex pattern" warning                    | Mistral-style fix not relevant for Qwen     | safe to ignore                                       |
 | `failure_recovery_traces` aborts on overlap          | source_ids leaked into train slice          | regenerate the holdout (`paper_sources --scale ...`) |
 | `eval-final` accuracy plateaus at ~13%               | RLOO never converged                         | inspect `rloo/eval_log.json`; raise `--steps`        |

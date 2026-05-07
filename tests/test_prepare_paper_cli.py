@@ -66,6 +66,8 @@ class PreparePaperCliTests(unittest.TestCase):
                         str(countdown_eval),
                         "--output-dir",
                         str(output_dir),
+                        "--trace-source-mode",
+                        "reference",
                         "--sft-val-ratio",
                         "0.0",
                         "--countdown-val-ratio",
@@ -79,6 +81,8 @@ class PreparePaperCliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(manifest["countdown"]["test"], 1)
         self.assertEqual(manifest["countdown"]["test_hard"], 1)
+        self.assertEqual(manifest["trace_source_mode"], "reference")
+        self.assertEqual(manifest["scale"], "pilot")
         self.assertIn('"sft"', buffer.getvalue())
         self.assertTrue(hard_eval_exists)
 

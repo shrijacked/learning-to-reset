@@ -154,6 +154,7 @@ def prepare_retry_recovery_examples(
     *,
     repeat: int = 1,
     require_target_correct: bool = False,
+    trace_domain: str | None = None,
 ) -> Tuple[PromptExample, ...]:
     """Build retry-stage recovery examples for records that carry explicit recovery targets."""
 
@@ -178,6 +179,9 @@ def prepare_retry_recovery_examples(
             "uses_clean": False,
             "stage": "retry-recovery",
         }
+        record_trace_domain = _trace_domain_for_record(record, trace_domain)
+        if record_trace_domain is not None:
+            metadata["trace_domain"] = record_trace_domain
         if verification is not None:
             metadata.update(
                 {
@@ -198,22 +202,59 @@ def prepare_retry_recovery_examples(
     return tuple(examples)
 
 
+def _trace_domain_for_record(
+    record: TraceRecord,
+    trace_domain: str | None,
+) -> str | None:
+    if trace_domain is not None:
+        return trace_domain
+    record_domain = record.metadata.get("trace_domain")
+    if record_domain not in (None, ""):
+        return str(record_domain)
+    if record.metadata.get("source") == "synthetic_countdown_solver":
+        return "countdown-synthetic"
+    return None
+
+
+def _with_trace_domain(
+    example: PromptExample,
+    trace_domain: str | None,
+) -> PromptExample:
+    if trace_domain is None:
+        return example
+    metadata = dict(example.metadata)
+    metadata["trace_domain"] = trace_domain
+    return PromptExample(
+        prompt=example.prompt,
+        response=example.response,
+        metadata=metadata,
+    )
+
+
 def prepare_sft_examples(
     records: Sequence[TraceRecord],
     *,
     include_recovery_examples: bool = False,
     recovery_repeat: int = 1,
     require_recovery_target_correct: bool = False,
+    trace_domain: str | None = None,
 ) -> Tuple[PromptExample, ...]:
     """Convert trace records into prompt/response examples for SFT."""
 
-    examples = [build_sft_training_example(record) for record in records]
+    examples = [
+        _with_trace_domain(
+            build_sft_training_example(record),
+            _trace_domain_for_record(record, trace_domain),
+        )
+        for record in records
+    ]
     if include_recovery_examples:
         examples.extend(
             prepare_retry_recovery_examples(
                 records,
                 repeat=recovery_repeat,
                 require_target_correct=require_recovery_target_correct,
+                trace_domain=trace_domain,
             )
         )
     return tuple(examples)
